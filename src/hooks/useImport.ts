@@ -8,6 +8,7 @@ import { type ShapePoolItem, SHAPE_LIST, SHAPE_PATH_FORMULAS } from '@/configs/s
 import useAddSlidesOrElements from '@/hooks/useAddSlidesOrElements'
 import useSlideHandler from '@/hooks/useSlideHandler'
 import useHistorySnapshot from './useHistorySnapshot'
+import { uploadImage, getImageAccessUrl } from '@/services/image'
 import message from '@/utils/message'
 import { getSvgPathRange } from '@/utils/svgPathParser'
 import type {
@@ -25,8 +26,18 @@ import type {
   Gradient,
 } from '@/types/slides'
 
+// 生成字符串的SHA-256哈希值
+const generateSHA256 = async (str: string): Promise<string> => {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(str)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+  return hashHex
+}
+
 const convertFontSizePtToPx = (html: string, ratio: number) => {
-  return html.replace(/font-size:\s*([\d.]+)pt/g, (match, p1) => {
+  return html.replace(/font-size:\s*([\d.]+)pt/g, (_, p1) => {
     return `font-size: ${(parseFloat(p1) * ratio).toFixed(1)}px`
   })
 }
@@ -48,7 +59,25 @@ export default () => {
     const reader = new FileReader()
     reader.addEventListener('load', () => {
       try {
-        const { slides } = JSON.parse(reader.result as string)
+        const parsedData = JSON.parse(reader.result as string)
+        const { slides, width, height, theme, title } = parsedData
+
+        // 恢复标题
+        if (title) {
+          slidesStore.setTitle(title)
+        }
+
+        // 恢复画布大小
+        if (width && height) {
+          slidesStore.setViewportSize(width)
+          slidesStore.setViewportRatio(height / width)
+        }
+
+        // 恢复主题
+        if (theme) {
+          slidesStore.setTheme(theme)
+        }
+
         if (cover) {
           slidesStore.updateSlideIndex(0)
           slidesStore.setSlides(slides)
@@ -74,7 +103,20 @@ export default () => {
     const reader = new FileReader()
     reader.addEventListener('load', () => {
       try {
-        const { slides } = JSON.parse(decrypt(reader.result as string))
+        const parsedData = JSON.parse(decrypt(reader.result as string))
+        const { slides, width, height, theme } = parsedData
+
+        // 恢复画布大小
+        if (width && height) {
+          slidesStore.setViewportSize(width)
+          slidesStore.setViewportRatio(height / width)
+        }
+
+        // 恢复主题
+        if (theme) {
+          slidesStore.setTheme(theme)
+        }
+
         if (cover) {
           slidesStore.updateSlideIndex(0)
           slidesStore.setSlides(slides)
@@ -245,11 +287,78 @@ export default () => {
     return { x: graphicX, y: graphicY }
   }
 
+  // 处理base64图片上传到COS（静默模式，不显示提示），支持滤重
+  const uploadBase64ImageSilent = async (base64Data: string, filename: string, imageCache: Map<string, { success: boolean; image_url: string; image_id: string; cos_key: string; message: string }>): Promise<{ success: boolean; image_url: string; image_id: string; cos_key: string; message: string }> => {
+    try {
+      // 生成图片内容的SHA-256哈希作为唯一标识
+      const imageHash = await generateSHA256(base64Data)
+
+      // 检查缓存中是否已存在相同图片
+      if (imageCache.has(imageHash)) {
+        const cachedResult = imageCache.get(imageHash)!
+        return cachedResult
+      }
+
+      // 将base64转换为Blob
+      const response = await fetch(base64Data)
+      const blob = await response.blob()
+
+      // 创建File对象
+      const file = new File([blob], filename, { type: blob.type })
+
+      // 上传图片到COS（静默模式，不显示进度）
+      const uploadResult = await uploadImage(file)
+
+      if (uploadResult.success) {
+        // 获取预签名URL
+        try {
+          const presignedUrlResult = await getImageAccessUrl(uploadResult.image_id)
+          const result = {
+            ...uploadResult,
+            image_url: presignedUrlResult.url,
+            imageId: uploadResult.image_id
+          }
+          // 将结果存入缓存
+          imageCache.set(imageHash, result)
+          return result
+        }
+        catch (urlError) {
+          // 如果获取预签名URL失败，回退到原始URL
+          const result = {
+            ...uploadResult,
+            imageId: uploadResult.image_id
+          }
+          imageCache.set(imageHash, result)
+          return result
+        }
+      }
+      else {
+        const result = uploadResult
+        imageCache.set(imageHash, result)
+        return result
+      }
+    }
+    catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '上传失败'
+      const result = {
+        success: false,
+        image_url: '',
+        image_id: '',
+        cos_key: '',
+        message: errorMessage
+      }
+      // 即使上传失败也缓存结果，避免重复尝试
+      const imageHash = await generateSHA256(base64Data)
+      imageCache.set(imageHash, result)
+      return result
+    }
+  }
+
   // 导入PPTX文件
   const importPPTXFile = (files: FileList, options?: { cover?: boolean; fixedViewport?: boolean }) => {
     const defaultOptions = {
       cover: false,
-      fixedViewport: false, 
+      fixedViewport: false,
     }
     const { cover, fixedViewport } = { ...defaultOptions, ...options }
 
@@ -258,11 +367,14 @@ export default () => {
 
     exporting.value = true
 
+    // 创建图片缓存，用于滤重处理
+    const imageCache = new Map<string, { success: boolean; image_url: string; image_id: string; cos_key: string; message: string }>()
+
     const shapeList: ShapePoolItem[] = []
     for (const item of SHAPE_LIST) {
       shapeList.push(...item.children)
     }
-    
+
     const reader = new FileReader()
     reader.onload = async e => {
       let json = null
@@ -277,7 +389,7 @@ export default () => {
 
       let ratio = 96 / 72
       const width = json.size.width
-      
+
       if (fixedViewport) ratio = 1000 / width
       else slidesStore.setViewportSize(width * ratio)
 
@@ -287,13 +399,47 @@ export default () => {
       for (const item of json.slides) {
         const { type, value } = item.fill
         let background: SlideBackground
+
+        // 处理背景图片上传
         if (type === 'image') {
-          background = {
-            type: 'image',
-            image: {
-              src: value.picBase64,
-              size: 'cover',
-            },
+          try {
+            const uploadResult = await uploadBase64ImageSilent(value.picBase64, `background_${nanoid(8)}.png`, imageCache)
+            if (uploadResult.success) {
+              background = {
+                type: 'image',
+                image: {
+                  src: uploadResult.image_url,
+                  size: 'cover',
+                  // 添加imageInfo字段存储持久化信息
+                  imageInfo: {
+                    id: nanoid(10),
+                    filename: `background_${nanoid(8)}.png`,
+                    cosKey: uploadResult.cos_key,
+                    imageId: uploadResult.image_id,
+                    uploadTime: Date.now()
+                  }
+                },
+              }
+            }
+            else {
+              // 上传失败，使用原始base64
+              background = {
+                type: 'image',
+                image: {
+                  src: value.picBase64,
+                  size: 'cover',
+                },
+              }
+            }
+          }
+          catch (error) {
+            background = {
+              type: 'image',
+              image: {
+                src: value.picBase64,
+                size: 'cover',
+              },
+            }
           }
         }
         else if (type === 'gradient') {
@@ -323,7 +469,7 @@ export default () => {
           remark: item.note || '',
         }
 
-        const parseElements = (elements: Element[]) => {
+        const parseElements = async (elements: Element[]) => {
           const sortedElements = elements.sort((a, b) => a.order - b.order)
 
           for (const el of sortedElements) {
@@ -336,7 +482,7 @@ export default () => {
             el.height = el.height * ratio
             el.left = el.left * ratio
             el.top = el.top * ratio
-  
+
             if (el.type === 'text') {
               const textEl: PPTTextElement = {
                 type: 'text',
@@ -369,62 +515,127 @@ export default () => {
               slide.elements.push(textEl)
             }
             else if (el.type === 'image') {
-              const element: PPTImageElement = {
-                type: 'image',
-                id: nanoid(10),
-                src: el.src,
-                width: el.width,
-                height: el.height,
-                left: el.left,
-                top: el.top,
-                fixedRatio: true,
-                rotate: el.rotate,
-                flipH: el.isFlipH,
-                flipV: el.isFlipV,
-              }
-              if (el.borderWidth) {
-                element.outline = {
-                  color: el.borderColor,
-                  width: +(el.borderWidth * ratio).toFixed(2),
-                  style: el.borderType,
+              // 处理图片元素上传
+              try {
+                const uploadResult = await uploadBase64ImageSilent(el.src, `element_${nanoid(8)}.png`, imageCache)
+                const element: PPTImageElement = {
+                  type: 'image',
+                  id: nanoid(10),
+                  src: uploadResult.success ? uploadResult.image_url : el.src, // 上传成功使用预签名URL，失败使用原始URL
+                  width: el.width,
+                  height: el.height,
+                  left: el.left,
+                  top: el.top,
+                  fixedRatio: true,
+                  rotate: el.rotate,
+                  flipH: el.isFlipH,
+                  flipV: el.isFlipV,
+                  // 添加imageInfo字段存储持久化信息
+                  ...(uploadResult.success && {
+                    imageInfo: {
+                      id: nanoid(10),
+                      filename: `element_${nanoid(8)}.png`,
+                      cosKey: uploadResult.cos_key,
+                      imageId: uploadResult.image_id,
+                      uploadTime: Date.now()
+                    }
+                  })
                 }
-              }
-              const clipShapeTypes = ['roundRect', 'ellipse', 'triangle', 'rhombus', 'pentagon', 'hexagon', 'heptagon', 'octagon', 'parallelogram', 'trapezoid']
-              if (el.rect) {
-                element.clip = {
-                  shape: (el.geom && clipShapeTypes.includes(el.geom)) ? el.geom : 'rect',
-                  range: [
-                    [
-                      el.rect.l || 0,
-                      el.rect.t || 0,
-                    ],
-                    [
-                      100 - (el.rect.r || 0),
-                      100 - (el.rect.b || 0),
-                    ],
-                  ]
+                if (el.borderWidth) {
+                  element.outline = {
+                    color: el.borderColor,
+                    width: +(el.borderWidth * ratio).toFixed(2),
+                    style: el.borderType,
+                  }
                 }
-              }
-              else if (el.geom && clipShapeTypes.includes(el.geom)) {
-                element.clip = {
-                  shape: el.geom,
-                  range: [[0, 0], [100, 100]]
+                const clipShapeTypes = ['roundRect', 'ellipse', 'triangle', 'rhombus', 'pentagon', 'hexagon', 'heptagon', 'octagon', 'parallelogram', 'trapezoid']
+                if (el.rect) {
+                  element.clip = {
+                    shape: (el.geom && clipShapeTypes.includes(el.geom)) ? el.geom : 'rect',
+                    range: [
+                      [
+                        el.rect.l || 0,
+                        el.rect.t || 0,
+                      ],
+                      [
+                        100 - (el.rect.r || 0),
+                        100 - (el.rect.b || 0),
+                      ],
+                    ]
+                  }
                 }
+                else if (el.geom && clipShapeTypes.includes(el.geom)) {
+                  element.clip = {
+                    shape: el.geom,
+                    range: [[0, 0], [100, 100]]
+                  }
+                }
+                slide.elements.push(element)
               }
-              slide.elements.push(element)
+              catch (error) {
+                // 上传失败，使用原始base64
+                const element: PPTImageElement = {
+                  type: 'image',
+                  id: nanoid(10),
+                  src: el.src,
+                  width: el.width,
+                  height: el.height,
+                  left: el.left,
+                  top: el.top,
+                  fixedRatio: true,
+                  rotate: el.rotate,
+                  flipH: el.isFlipH,
+                  flipV: el.isFlipV,
+                }
+                if (el.borderWidth) {
+                  element.outline = {
+                    color: el.borderColor,
+                    width: +(el.borderWidth * ratio).toFixed(2),
+                    style: el.borderType,
+                  }
+                }
+                slide.elements.push(element)
+              }
             }
             else if (el.type === 'math') {
-              slide.elements.push({
-                type: 'image',
-                id: nanoid(10),
-                src: el.picBase64,
-                width: el.width,
-                height: el.height,
-                left: el.left,
-                top: el.top,
-                fixedRatio: true,
-                rotate: 0,
-              })
+              // 处理数学公式图片上传
+              try {
+                const uploadResult = await uploadBase64ImageSilent(el.picBase64, `math_${nanoid(8)}.png`, imageCache)
+                slide.elements.push({
+                  type: 'image',
+                  id: nanoid(10),
+                  src: uploadResult.success ? uploadResult.image_url : el.picBase64,
+                  width: el.width,
+                  height: el.height,
+                  left: el.left,
+                  top: el.top,
+                  fixedRatio: true,
+                  rotate: 0,
+                  // 添加imageInfo字段存储持久化信息
+                  ...(uploadResult.success && {
+                    imageInfo: {
+                      id: nanoid(10),
+                      filename: `math_${nanoid(8)}.png`,
+                      cosKey: uploadResult.cos_key,
+                      imageId: uploadResult.image_id,
+                      uploadTime: Date.now()
+                    }
+                  })
+                })
+              }
+              catch (error) {
+                slide.elements.push({
+                  type: 'image',
+                  id: nanoid(10),
+                  src: el.picBase64,
+                  width: el.width,
+                  height: el.height,
+                  left: el.left,
+                  top: el.top,
+                  fixedRatio: true,
+                  rotate: 0,
+                })
+              }
             }
             else if (el.type === 'audio') {
               slide.elements.push({
@@ -478,7 +689,24 @@ export default () => {
                   rotate: el.fill.value.rot,
                 } : undefined
 
-                const pattern: string | undefined = el.fill?.type === 'image' ? el.fill.value.picBase64 : undefined
+                let pattern: string | undefined = undefined
+
+                // 处理shape元素的图片填充，上传到COS
+                if (el.fill?.type === 'image' && el.fill.value.picBase64) {
+                  try {
+                    const uploadResult = await uploadBase64ImageSilent(el.fill.value.picBase64, `shape_pattern_${nanoid(8)}.png`, imageCache)
+                    if (uploadResult.success) {
+                      pattern = uploadResult.image_url
+                    } 
+                    else {
+                      // 上传失败，使用原始base64
+                      pattern = el.fill.value.picBase64
+                    }
+                  } 
+                  catch (error) {
+                    pattern = el.fill.value.picBase64
+                  }
+                }
 
                 const fill = el.fill?.type === 'color' ? el.fill.value : ''
                 
@@ -651,7 +879,7 @@ export default () => {
               let series: number[][]
   
               if (el.chartType === 'scatterChart' || el.chartType === 'bubbleChart') {
-                labels = el.data[0].map((item, index) => `坐标${index + 1}`)
+                labels = el.data[0].map((_, index) => `坐标${index + 1}`)
                 legends = ['X', 'Y']
                 series = el.data
               }
@@ -742,7 +970,7 @@ export default () => {
               })
               if (el.isFlipH) elements = flipGroupElements(elements, 'y')
               if (el.isFlipV) elements = flipGroupElements(elements, 'x')
-              parseElements(elements)
+              await parseElements(elements)
             }
             else if (el.type === 'diagram') {
               const elements = el.elements.map(_el => ({
@@ -750,11 +978,11 @@ export default () => {
                 left: _el.left + originLeft,
                 top: _el.top + originTop,
               }))
-              parseElements(elements)
+              await parseElements(elements)
             }
           }
         }
-        parseElements([...item.elements, ...item.layoutElements])
+        await parseElements([...item.elements, ...item.layoutElements])
         slides.push(slide)
       }
 

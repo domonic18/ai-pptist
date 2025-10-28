@@ -38,6 +38,10 @@ export interface MainState {
   showSymbolPanel: boolean
   showMarkupPanel: boolean
   showAIPPTDialog: boolean
+  showImageManager: boolean
+  showModelManager: boolean
+  showImageGeneration: boolean,
+  isImageGenerationPage: boolean
 }
 
 const nanoid = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz')
@@ -75,6 +79,10 @@ export const useMainStore = defineStore('main', {
     showSymbolPanel: false, // 打开符号面板
     showMarkupPanel: false, // 打开类型标注面板
     showAIPPTDialog: false, // 打开AIPPT创建窗口
+    showImageManager: false, // 打开图片管理器
+    showModelManager: false, // 打开模型管理器
+    showImageGeneration: false, // 打开图片生成
+    isImageGenerationPage: false, // 是否为独立页面
   }),
 
   getters: {
@@ -211,6 +219,22 @@ export const useMainStore = defineStore('main', {
 
     setAIPPTDialogState(show: boolean) {
       this.showAIPPTDialog = show
+    },
+
+    setModelManagerState(show: boolean) {
+      this.showModelManager = show
+    },
+
+    setImageManagerState(show: boolean) {
+      this.showImageManager = show
+    },
+
+    setImageGenerationState(show: boolean) {
+      this.showImageGeneration = show
+    },
+
+    setImageGenerationPageState(show: boolean) {
+      this.isImageGenerationPage = show
     },
   },
 })

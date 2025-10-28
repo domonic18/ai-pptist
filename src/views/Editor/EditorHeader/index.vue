@@ -47,6 +47,8 @@
           <Divider :margin="10" />
           <PopoverMenuItem class="popover-menu-item" @click="resetSlides(); mainMenuVisible = false"><IconRefresh class="icon" /> 重置幻灯片</PopoverMenuItem>
           <PopoverMenuItem class="popover-menu-item" @click="openMarkupPanel(); mainMenuVisible = false"><IconMark class="icon" /> 幻灯片类型标注</PopoverMenuItem>
+          <PopoverMenuItem class="popover-menu-item" @click="openImageManager()"><IconPicture class="icon" /> 图片资源管理</PopoverMenuItem>
+          <PopoverMenuItem class="popover-menu-item" @click="openModelManager()"><IconCode class="icon" /> 模型配置管理</PopoverMenuItem>
           <PopoverMenuItem class="popover-menu-item" @click="mainMenuVisible = false; hotkeyDrawerVisible = true"><IconCommand class="icon" /> 快捷操作</PopoverMenuItem>
           <PopoverMenuItem class="popover-menu-item" @click="goLink('https://github.com/pipipi-pikachu/PPTist/issues')"><IconComment class="icon" /> 意见反馈</PopoverMenuItem>
           <PopoverMenuItem class="popover-menu-item" @click="goLink('https://github.com/pipipi-pikachu/PPTist/blob/master/doc/Q&A.md')"><IconHelpcenter class="icon" /> 常见问题</PopoverMenuItem>
@@ -89,6 +91,9 @@
       <div class="menu-item" v-tooltip="'AI生成PPT'" @click="openAIPPTDialog(); mainMenuVisible = false">
         <span class="text ai">AI</span>
       </div>
+      <div class="menu-item" v-tooltip="'AI图片生成'" @click="openImageGenerationPage()">
+        <IconMagic class="icon" />
+      </div>
       <div class="menu-item" v-tooltip="'导出'" @click="setDialogForExport('pptx')">
         <IconDownload class="icon" />
       </div>
@@ -106,6 +111,22 @@
       <template v-slot:title>快捷操作</template>
     </Drawer>
 
+    <Modal
+      v-model:visible="imageManagerVisible"
+      :width="1200"
+      :contentStyle="{ height: '800px' }"
+      :close-button="true"
+    >
+      <div class="image-manager-container">
+        <div class="image-manager-header">
+          <h2 class="manager-title">图片资源管理</h2>
+        </div>
+        <div class="image-manager-content">
+          <ImageManager @insert="handleImageInsert" />
+        </div>
+      </div>
+    </Modal>
+
     <FullscreenSpin :loading="exporting" tip="正在导入..." />
   </div>
 </template>
@@ -117,6 +138,7 @@ import { useMainStore, useSlidesStore } from '@/store'
 import useScreening from '@/hooks/useScreening'
 import useImport from '@/hooks/useImport'
 import useSlideHandler from '@/hooks/useSlideHandler'
+import useCreateElement from '@/hooks/useCreateElement'
 import type { DialogForExportTypes } from '@/types/export'
 
 import HotkeyDoc from './HotkeyDoc.vue'
@@ -127,6 +149,8 @@ import Input from '@/components/Input.vue'
 import Popover from '@/components/Popover.vue'
 import PopoverMenuItem from '@/components/PopoverMenuItem.vue'
 import Divider from '@/components/Divider.vue'
+import Modal from '@/components/Modal.vue'
+import ImageManager from '@/components/image/ImageManager.vue'
 
 const mainStore = useMainStore()
 const slidesStore = useSlidesStore()
@@ -134,9 +158,11 @@ const { title } = storeToRefs(slidesStore)
 const { enterScreening, enterScreeningFromStart } = useScreening()
 const { importSpecificFile, importPPTXFile, importJSON, exporting } = useImport()
 const { resetSlides } = useSlideHandler()
+const { createImageElement } = useCreateElement()
 
 const mainMenuVisible = ref(false)
 const hotkeyDrawerVisible = ref(false)
+const imageManagerVisible = ref(false)
 const editingTitle = ref(false)
 const titleValue = ref('')
 const titleInputRef = useTemplateRef<InstanceType<typeof Input>>('titleInputRef')
@@ -168,6 +194,28 @@ const openMarkupPanel = () => {
 
 const openAIPPTDialog = () => {
   mainStore.setAIPPTDialogState(true)
+}
+
+const openImageManager = () => {
+  imageManagerVisible.value = true
+  mainMenuVisible.value = false
+}
+
+const openModelManager = () => {
+  mainStore.setModelManagerState(true)
+  mainMenuVisible.value = false
+}
+
+const openImageGenerationPage = () => {
+  mainStore.setImageGenerationPageState(true)
+}
+
+const handleImageInsert = (image: any) => {
+  // 关闭图片管理器模态框
+  imageManagerVisible.value = false
+
+  // 调用创建图片元素的函数，传入 image metadata
+  createImageElement(image)
 }
 </script>
 
@@ -221,7 +269,7 @@ const openAIPPTDialog = () => {
 
   .icon {
     font-size: 18px;
-    margin-right: 10px;
+    margin-right: 12px;
   }
 }
 .statement {
@@ -365,5 +413,30 @@ const openAIPPTDialog = () => {
 .github-link {
   display: inline-block;
   height: 30px;
+}
+
+.image-manager-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.image-manager-header {
+  padding: 0 0 16px 0;
+  border-bottom: 1px solid #e4e7ed;
+  margin-bottom: 16px;
+
+  .manager-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #303133;
+  }
+}
+
+.image-manager-content {
+  flex: 1;
+  overflow: visible; /* Allow dropdowns to be visible */
+  position: relative;
 }
 </style>

@@ -7,9 +7,9 @@
         <Divider type="vertical" style="height: 20px;" />
         <Popover class="more-icon" trigger="click" v-model:value="moreVisible" :offset="10">
           <template #content>
-            <PopoverMenuItem class="popover-menu-item" center @click="toggleNotesPanel(); moreVisible = false"><IconComment class="icon" />批注面板</PopoverMenuItem>
-            <PopoverMenuItem class="popover-menu-item" center @click="toggleSelectPanel(); moreVisible = false"><IconMoveOne class="icon" />选择窗格</PopoverMenuItem>
-            <PopoverMenuItem class="popover-menu-item" center @click="toggleSraechPanel(); moreVisible = false"><IconSearch class="icon" />查找替换</PopoverMenuItem>
+            <PopoverMenuItem center @click="toggleNotesPanel(); moreVisible = false">批注面板</PopoverMenuItem>
+            <PopoverMenuItem center @click="toggleSelectPanel(); moreVisible = false">选择窗格</PopoverMenuItem>
+            <PopoverMenuItem center @click="toggleSraechPanel(); moreVisible = false">查找替换</PopoverMenuItem>
           </template>
           <IconMore class="handler-item" />
         </Popover>
@@ -46,9 +46,9 @@
           <IconDown class="arrow" />
         </Popover>
       </div>
-      <FileInput @change="files => insertImageElement(files)">
-        <IconPicture class="handler-item" v-tooltip="'插入图片'" />
-      </FileInput>
+      <div class="handler-item" v-tooltip="'插入图片'" @click="openImageManager">
+        <IconPicture />
+      </div>
       <Popover trigger="click" v-model:value="linePoolVisible" :offset="10">
         <template #content>
           <LinePool @select="line => drawLine(line)" />
@@ -75,8 +75,8 @@
         <template #content>
           <MediaInput 
             @close="mediaInputVisible = false"
-            @insertVideo="({ src, ext }) => { createVideoElement(src, ext); mediaInputVisible = false }"
-            @insertAudio="({ src, ext }) => { createAudioElement(src, ext); mediaInputVisible = false }"
+            @insertVideo="src => { createVideoElement(src); mediaInputVisible = false }"
+            @insertAudio="src => { createAudioElement(src); mediaInputVisible = false }"
           />
         </template>
         <IconVideoTwo class="handler-item" v-tooltip="'插入音视频'" />
@@ -103,13 +103,21 @@
     </div>
 
     <Modal
-      v-model:visible="latexEditorVisible" 
+      v-model:visible="latexEditorVisible"
       :width="880"
     >
-      <LaTeXEditor 
+      <LaTeXEditor
         @close="latexEditorVisible = false"
         @update="data => { createLatexElement(data); latexEditorVisible = false }"
       />
+    </Modal>
+
+    <Modal
+      v-model:visible="showImageManager"
+      :width="1200"
+      :contentStyle="{ height: '800px' }"
+    >
+      <ImageManager @insert="handleImageInsert" />
     </Modal>
   </div>
 </template>
@@ -131,6 +139,7 @@ import ChartPool from './ChartPool.vue'
 import TableGenerator from './TableGenerator.vue'
 import MediaInput from './MediaInput.vue'
 import LaTeXEditor from '@/components/LaTeXEditor/index.vue'
+import ImageManager from '@/components/image/ImageManager.vue'
 import FileInput from '@/components/FileInput.vue'
 import Modal from '@/components/Modal.vue'
 import Divider from '@/components/Divider.vue'
@@ -138,7 +147,7 @@ import Popover from '@/components/Popover.vue'
 import PopoverMenuItem from '@/components/PopoverMenuItem.vue'
 
 const mainStore = useMainStore()
-const { creatingElement, creatingCustomShape, showSelectPanel, showSearchPanel, showNotesPanel, showSymbolPanel } = storeToRefs(mainStore)
+const { creatingElement, creatingCustomShape, showSelectPanel, showSearchPanel, showNotesPanel, showSymbolPanel, showImageManager } = storeToRefs(mainStore)
 const { canUndo, canRedo } = storeToRefs(useSnapshotStore())
 
 const { redo, undo } = useHistorySnapshot()
@@ -167,11 +176,15 @@ const {
   createAudioElement,
 } = useCreateElement()
 
-const insertImageElement = (files: FileList) => {
-  const imageFile = files[0]
-  if (!imageFile) return
-  getImageDataURL(imageFile).then(dataURL => createImageElement(dataURL))
+const handleImageInsert = (image: any) => {
+  createImageElement(image)
+  mainStore.setImageManagerState(false)
 }
+
+const openImageManager = () => {
+  mainStore.setImageManagerState(true)
+}
+
 
 const shapePoolVisible = ref(false)
 const linePoolVisible = ref(false)
@@ -252,15 +265,6 @@ const toggleSymbolPanel = () => {
 }
 .more-icon {
   display: none;
-}
-.popover-menu-item {
-  display: flex;
-  padding: 8px 10px;
-
-  .icon {
-    font-size: 18px;
-    margin-right: 8px;
-  }
 }
 .add-element-handler {
   position: absolute;

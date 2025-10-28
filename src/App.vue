@@ -1,10 +1,14 @@
 <template>
   <template v-if="slides.length">
-    <Screen v-if="screening" />
+    <ImageGeneration v-if="isImageGenerationPage" />
+    <Screen v-else-if="screening" />
     <Editor v-else-if="_isPC" />
     <Mobile v-else />
   </template>
   <FullscreenSpin tip="数据初始化中，请稍等 ..." v-else  loading :mask="false" />
+
+  <!-- 上传状态面板 -->
+  <UploadStatusPanel />
 </template>
 
 
@@ -21,14 +25,16 @@ import api from '@/services'
 import Editor from './views/Editor/index.vue'
 import Screen from './views/Screen/index.vue'
 import Mobile from './views/Mobile/index.vue'
+import ImageGeneration from './views/ImageGeneration.vue'
 import FullscreenSpin from '@/components/FullscreenSpin.vue'
+import UploadStatusPanel from '@/components/upload/UploadStatusPanel.vue'
 
 const _isPC = isPC()
 
 const mainStore = useMainStore()
 const slidesStore = useSlidesStore()
 const snapshotStore = useSnapshotStore()
-const { databaseId } = storeToRefs(mainStore)
+const { databaseId, isImageGenerationPage } = storeToRefs(mainStore)
 const { slides } = storeToRefs(slidesStore)
 const { screening } = storeToRefs(useScreenStore())
 

@@ -6,6 +6,8 @@ import { getImageDataURL, isSVGString, svg2File } from '@/utils/image'
 import { isValidURL } from '@/utils/common'
 import useCreateElement from '@/hooks/useCreateElement'
 import useAddSlidesOrElements from '@/hooks/useAddSlidesOrElements'
+import { nanoid } from 'nanoid'
+import type { ImageItem } from '@/services/image'
 
 interface PasteTextClipboardDataOptions {
   onlySlide?: boolean
@@ -81,7 +83,18 @@ export default () => {
         // 尝试检查是否为SVG代码
         else if (isSVGString(clipboardData)) {
           const file = svg2File(clipboardData)
-          getImageDataURL(file).then(dataURL => createImageElement(dataURL))
+          getImageDataURL(file).then(dataURL => {
+            const imageItem: ImageItem = {
+              id: nanoid(10),
+              original_filename: file.name,
+              filename: file.name,
+              file_size: file.size,
+              mime_type: file.type,
+              url: dataURL,
+              created_at: new Date().toISOString()
+            }
+            createImageElement(imageItem)
+          })
         }
         // 普通文字
         else {

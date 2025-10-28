@@ -26,7 +26,7 @@
       <div class="configs">
         <div class="config-item">
           <div class="label">语言：</div>
-          <Select 
+          <Select
             class="config-content"
             style="width: 80px;"
             v-model:value="language"
@@ -39,7 +39,7 @@
         </div>
         <div class="config-item">
           <div class="label">风格：</div>
-          <Select 
+          <Select
             class="config-content"
             style="width: 80px;"
             v-model:value="style"
@@ -53,20 +53,35 @@
           />
         </div>
         <div class="config-item">
-          <div class="label">模型：</div>
-          <Select 
+          <div class="label">页数：</div>
+          <Select
             class="config-content"
-            style="width: 190px;"
-            v-model:value="model"
+            style="width: 80px;"
+            v-model:value="slideCount"
             :options="[
-              { label: 'GLM-4.5-Flash', value: 'GLM-4.5-Flash' },
-              { label: 'Doubao-Seed-1.6-flash', value: 'ark-doubao-seed-1.6-flash' },
+              { label: '5页', value: 5 },
+              { label: '8页', value: 8 },
+              { label: '10页', value: 10 },
+              { label: '15页', value: 15 },
+              { label: '20页', value: 20 },
+              { label: '25页', value: 25 },
             ]"
           />
         </div>
         <div class="config-item">
+          <div class="label">模型：</div>
+          <Select
+            class="config-content"
+            style="width: 190px;"
+            v-model:value="model"
+            :options="modelOptions"
+            :loading="modelsLoading"
+            placeholder="选择AI模型"
+          />
+        </div>
+        <div class="config-item">
           <div class="label">配图：</div>
-          <Select 
+          <Select
             class="config-content"
             style="width: 100px;"
             v-model:value="img"
@@ -77,11 +92,6 @@
               { label: 'AI生图', value: 'ai-create', disabled: true },
             ]"
           />
-        </div>
-      </div>
-      <div class="configs" v-if="!isEmptySlide">
-        <div class="config-item">
-          <Checkbox v-model:value="overwrite">覆盖已有幻灯片</Checkbox>
         </div>
       </div>
     </template>
@@ -119,10 +129,8 @@
 <script lang="ts" setup>
 import { ref, onMounted, useTemplateRef } from 'vue'
 import { storeToRefs } from 'pinia'
-import api from '@/services'
-import useAIPPT from '@/hooks/useAIPPT'
-import useSlideHandler from '@/hooks/useSlideHandler'
-import type { AIPPTSlide } from '@/types/AIPPT'
+import useOutlineGeneration from '@/hooks/useOutlineGeneration'
+import usePPTCreation from '@/hooks/usePPTCreation'
 import type { Slide, SlideTheme } from '@/types/slides'
 import message from '@/utils/message'
 import { decrypt } from '@/utils/crypto'
@@ -132,28 +140,82 @@ import Button from '@/components/Button.vue'
 import Select from '@/components/Select.vue'
 import FullscreenSpin from '@/components/FullscreenSpin.vue'
 import OutlineEditor from '@/components/OutlineEditor.vue'
-import Checkbox from '@/components/Checkbox.vue'
+import apiService from '@/services'
 
 const mainStore = useMainStore()
-const slidesStore = useSlidesStore()
-const { templates } = storeToRefs(slidesStore)
-
-const { resetSlides, isEmptySlide } = useSlideHandler()
-const { AIPPT, presetImgPool, getMdContent } = useAIPPT()
+const slideStore = useSlidesStore()
+const { templates } = storeToRefs(slideStore)
 
 const language = ref('中文')
 const style = ref('通用')
 const img = ref('')
 const keyword = ref('')
-const outline = ref('')
 const selectedTemplate = ref('template_1')
-const loading = ref(false)
-const outlineCreating = ref(false)
-const overwrite = ref(true)
 const step = ref<'setup' | 'outline' | 'template'>('setup')
-const model = ref('GLM-4.5-Flash')
+const model = ref('')
+const slideCount = ref(8)
 const outlineRef = useTemplateRef<HTMLElement>('outlineRef')
 const inputRef = useTemplateRef<InstanceType<typeof Input>>('inputRef')
+const modelOptions = ref<Array<{ label: string; value: string }>>([])
+const modelsLoading = ref(false)
+
+const {
+  outline,
+  outlineCreating,
+  createOutline: generateOutline
+} = useOutlineGeneration()
+
+const {
+  createPPT: generatePPT
+} = usePPTCreation()
+
+const loading = ref(false)
+
+// 获取AI模型列表
+const fetchAIModels = async () => {
+  modelsLoading.value = true
+  try {
+    const models = await apiService.getAIModels()
+
+    // 过滤启用的模型并转换为选项格式
+    modelOptions.value = models
+      .filter(m => m.is_enabled)
+      .map(m => ({
+        label: m.name,
+        value: m.name
+      }))
+
+    // 设置默认模型
+    const defaultModel = models.find((m: any) => m.is_default && m.is_enabled)
+    if (defaultModel) {
+      model.value = defaultModel.name
+    }
+    else if (modelOptions.value.length > 0) {
+      model.value = modelOptions.value[0].value
+    }
+  }
+  catch (error) {
+    console.error('Failed to fetch AI models:', error)
+    message.error('获取AI模型列表失败，使用默认模型')
+
+    // 使用回退的默认模型
+    modelOptions.value = [
+      { label: 'GLM-4.5-Air', value: 'GLM-4.5-Air' },
+      { label: 'GLM-4.5-Flash', value: 'GLM-4.5-Flash' },
+      { label: 'Doubao-Seed-1.6-flash', value: 'ark-doubao-seed-1.6-flash' },
+      { label: 'Doubao-Seed-1.6', value: 'ark-doubao-seed-1.6' },
+    ]
+    model.value = 'GLM-4.5-Air'
+  }
+  finally {
+    modelsLoading.value = false
+  }
+}
+
+// 组件挂载时获取模型列表
+onMounted(() => {
+  fetchAIModels()
+})
 
 const recommends = ref([
   '2025科技前沿动态',
@@ -183,98 +245,37 @@ const createOutline = async () => {
   if (!keyword.value) return message.error('请先输入PPT主题')
 
   loading.value = true
-  outlineCreating.value = true
-  
-  const stream = await api.AIPPT_Outline({
-    content: keyword.value,
+
+  const success = await generateOutline({
+    title: keyword.value,
+    input_content: keyword.value,
     language: language.value,
-    model: model.value,
+    slide_count: slideCount.value,
+    model_settings: { model: model.value }
   })
-  if (stream.status === 500) {
-    message.error('AI服务异常，请更换其他模型重试')
-    loading.value = false
-    return
-  }
 
   loading.value = false
-  step.value = 'outline'
 
-  const reader: ReadableStreamDefaultReader = stream.body.getReader()
-  const decoder = new TextDecoder('utf-8')
-  
-  const readStream = () => {
-    reader.read().then(({ done, value }) => {
-      if (done) {
-        outline.value = getMdContent(outline.value)
-        outline.value = outline.value.replace(/<!--[\s\S]*?-->/g, '').replace(/<think>[\s\S]*?<\/think>/g, '')
-        outlineCreating.value = false
-        return
-      }
-  
-      const chunk = decoder.decode(value, { stream: true })
-      outline.value += chunk
-
-      if (outlineRef.value) {
-        outlineRef.value.scrollTop = outlineRef.value.scrollHeight + 20
-      }
-
-      readStream()
-    })
+  if (success) {
+    step.value = 'outline'
   }
-  readStream()
 }
 
-const createPPT = async (template?: { slides: Slide[], theme: SlideTheme }) => {
+const createPPT = async (template?: { slides: Slide[], theme: SlideTheme, width?: number, height?: number }) => {
   loading.value = true
 
-  if (overwrite.value) resetSlides()
-
-  const stream = await api.AIPPT({
+  const success = await generatePPT({
     content: outline.value,
     language: language.value,
     style: style.value,
     model: model.value,
-  })
+  }, selectedTemplate.value, img.value, template)
 
-  if (img.value === 'test') {
-    const imgs = await api.getMockData('imgs')
-    presetImgPool(imgs)
+  loading.value = false
+
+  if (success) {
+    mainStore.setAIPPTDialogState(false)
   }
-
-  let templateData = template
-  if (!templateData) templateData = await api.getMockData(selectedTemplate.value)
-  const templateSlides: Slide[] = templateData!.slides
-  const templateTheme: SlideTheme = templateData!.theme
-
-  const reader: ReadableStreamDefaultReader = stream.body.getReader()
-  const decoder = new TextDecoder('utf-8')
-  
-  const readStream = () => {
-    reader.read().then(({ done, value }) => {
-      if (done) {
-        loading.value = false
-        mainStore.setAIPPTDialogState(false)
-        slidesStore.setTheme(templateTheme)
-        return
-      }
-  
-      const chunk = decoder.decode(value, { stream: true })
-      try {
-        const text = chunk.replace('```json', '').replace('```', '').trim()
-        if (text) {
-          const slide: AIPPTSlide = JSON.parse(chunk)
-          AIPPT(templateSlides, [slide])
-        }
-      }
-      catch (err) {
-        // eslint-disable-next-line
-        console.error(err)
-      }
-
-      readStream()
-    })
-  }
-  readStream()
 }
 
 const uploadLocalTemplate = () => {
@@ -288,8 +289,8 @@ const uploadLocalTemplate = () => {
       const reader = new FileReader()
       reader.addEventListener('load', () => {
         try {
-          const { slides, theme } = JSON.parse(decrypt(reader.result as string))
-          createPPT({ slides, theme })
+          const { slides, theme, width, height } = JSON.parse(decrypt(reader.result as string))
+          createPPT({ slides, theme, width, height })
         }
         catch {
           message.error('上传的模板文件数据异常，请重新上传或使用预置模板')
@@ -358,17 +359,20 @@ const uploadLocalTemplate = () => {
 }
 .select-template {
   .templates {
-    max-height: 450px;
-    overflow: auto;
     display: flex;
     margin-bottom: 10px;
-    padding-right: 5px;
     @include flex-grid-layout();
   
     .template {
       border: 2px solid $borderColor;
       border-radius: $borderRadius;
-      @include flex-grid-layout-children(2, 49%);
+      width: 324px;
+      height: 184px;
+      margin-bottom: 12px;
+
+      &:not(:nth-child(2n)) {
+        margin-right: 12px;
+      }
 
       &.selected {
         border-color: $themeColor;
@@ -376,7 +380,6 @@ const uploadLocalTemplate = () => {
   
       img {
         width: 100%;
-        min-height: 180px;
       }
     }
   }
@@ -414,11 +417,25 @@ const uploadLocalTemplate = () => {
   margin-top: 15px;
   display: flex;
   justify-content: space-between;
+  gap: 15px;
 
   .config-item {
     font-size: 13px;
     display: flex;
     align-items: center;
+    flex: 1;
+    min-width: 0;
+
+    .label {
+      flex-shrink: 0;
+      margin-right: 8px;
+      white-space: nowrap;
+    }
+
+    .config-content {
+      flex: 1;
+      min-width: 0;
+    }
   }
 }
 .count {
@@ -452,12 +469,14 @@ const uploadLocalTemplate = () => {
     margin-top: 15px;
     display: flex;
     flex-direction: column;
+    gap: 8px;
 
     .config-item {
-      margin-top: 8px;
+      margin-top: 0;
 
       .label {
         flex-shrink: 0;
+        margin-right: 8px;
       }
 
       .config-content {
@@ -467,7 +486,20 @@ const uploadLocalTemplate = () => {
   }
   .select-template {
     .templates {
-      padding-right: 0;
+      max-height: 450px;
+      display: block;
+      overflow: auto;
+    
+      .template {
+        width: 100%;
+        height: unset;
+        margin-bottom: 0 !important;
+        margin-right: 0 !important;
+
+        & + .template {
+          margin-top: 20px;
+        }
+      }
     }
   }
 }

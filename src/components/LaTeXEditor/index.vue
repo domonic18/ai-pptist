@@ -117,9 +117,6 @@ const symbolPool = computed(() => {
 
 onMounted(() => {
   if (props.value) latex.value = props.value
-  setTimeout(() => {
-    textAreaRef.value && textAreaRef.value.focus()
-  }, 0)
 })
 
 const update = () => {

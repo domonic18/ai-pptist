@@ -31,14 +31,25 @@
   </Modal>
 
   <Modal
-    :visible="showAIPPTDialog" 
-    :width="720"
+    :visible="showAIPPTDialog"
+    :width="800"
     :closeOnClickMask="false"
     :closeOnEsc="false"
     closeButton
     @closed="closeAIPPTDialog()"
   >
     <AIPPTDialog />
+  </Modal>
+
+  <Modal
+    :visible="showModelManager"
+    :width="1200"
+    :closeOnClickMask="false"
+    :closeOnEsc="false"
+    closeButton
+    @closed="closeModelManager()"
+  >
+    <ModelManagement />
   </Modal>
 </template>
 
@@ -62,13 +73,15 @@ import NotesPanel from './NotesPanel.vue'
 import SymbolPanel from './SymbolPanel.vue'
 import MarkupPanel from './MarkupPanel.vue'
 import AIPPTDialog from './AIPPTDialog.vue'
+import ModelManagement from '@/views/Settings/ModelManagement.vue'
 import Modal from '@/components/Modal.vue'
 
 const mainStore = useMainStore()
-const { dialogForExport, showSelectPanel, showSearchPanel, showNotesPanel, showSymbolPanel, showMarkupPanel, showAIPPTDialog } = storeToRefs(mainStore)
+const { dialogForExport, showSelectPanel, showSearchPanel, showNotesPanel, showSymbolPanel, showMarkupPanel, showAIPPTDialog, showModelManager } = storeToRefs(mainStore)
 
 const closeExportDialog = () => mainStore.setDialogForExport('')
 const closeAIPPTDialog = () => mainStore.setAIPPTDialogState(false)
+const closeModelManager = () => mainStore.setModelManagerState(false)
 
 const remarkHeight = ref(40)
 

@@ -15,10 +15,8 @@
       </ButtonGroup>
       <ButtonGroup class="row">
         <Button style="flex: 1;" @click="insertTextElement()"><IconFontSize class="icon" /> 文字</Button>
-        <Button style="flex: 1;">
-          <FileInput @change="files => insertImageElement(files)">
-            <IconPicture class="icon" />图片
-          </FileInput>
+        <Button style="flex: 1;" @click="openImageManager()">
+          <IconPicture class="icon" />图片
         </Button>
         <Button style="flex: 1;" @click="insertShapeElement('square')"><IconSquare class="icon" /> 矩形</Button>
         <Button style="flex: 1;" @click="insertShapeElement('round')"><IconRound class="icon" /> 圆形</Button>
@@ -35,11 +33,9 @@ import { storeToRefs } from 'pinia'
 import { useSlidesStore } from '@/store'
 import useSlideHandler from '@/hooks/useSlideHandler'
 import useCreateElement from '@/hooks/useCreateElement'
-import { getImageDataURL } from '@/utils/image'
 import type { ShapePoolItem } from '@/configs/shapes'
 
 import MobileThumbnails from '../MobileThumbnails.vue'
-import FileInput from '@/components/FileInput.vue'
 import Button from '@/components/Button.vue'
 import ButtonGroup from '@/components/ButtonGroup.vue'
 
@@ -61,9 +57,9 @@ const insertTextElement = () => {
   }, { content: '<p>新添加文本</p>' })
 }
 
-const insertImageElement = (files: FileList) => {
-  if (!files || !files[0]) return
-  getImageDataURL(files[0]).then(dataURL => createImageElement(dataURL))
+const openImageManager = () => {
+  // 移动端图片管理器功能待实现
+  alert('移动端图片管理器功能待实现')
 }
 
 const insertShapeElement = (type: 'square' | 'round') => {

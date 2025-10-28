@@ -49,13 +49,11 @@
     </div>
 
     <div class="background-image-wrapper" v-if="background.type === 'image'">
-      <FileInput @change="files => uploadBackgroundImage(files)">
-        <div class="background-image">
-          <div class="content" :style="{ backgroundImage: `url(${background.image?.src})` }">
-            <IconPlus />
-          </div>
+      <div class="background-image" @click="showImageManager = true">
+        <div class="content" :style="{ backgroundImage: `url(${background.image?.src})` }">
+          <IconPlus />
         </div>
-      </FileInput>
+      </div>
     </div>
 
     <div class="background-gradient-wrapper" v-if="background.type === 'gradient'">
@@ -96,6 +94,15 @@
       <Button style="flex: 1;" @click="applyBackgroundAllSlide()"><IconCheck /> 应用背景到全部</Button>
     </div>
 
+    <Modal
+      :visible="showImageManager"
+      @update:visible="val => showImageManager = val"
+      :width="1200"
+      :contentStyle="{ height: '800px' }"
+    >
+      <ImageManager @insert="handleBackgroundImageInsert" />
+    </Modal>
+
     <Divider />
 
     <div class="row">
@@ -110,6 +117,18 @@
           { label: '纸张 A3 / A4', value: 0.70710678 },
           { label: '竖向 A3 / A4', value: 1.41421356 },
         ]"
+      />
+    </div>
+
+    <div class="row">
+      <div style="width: 40%;">画布宽度：</div>
+      <NumberInput
+        :value="viewportSize"
+        @update:value="value => updateViewportSize(value as number)"
+        style="width: 60%;"
+        :min="100"
+        :max="3000"
+        :step="10"
       />
     </div>
 
@@ -305,7 +324,8 @@
 import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSlidesStore } from '@/store'
-import type { 
+import ImageManager from '@/components/image/ImageManager.vue'
+import type {
   Gradient,
   GradientType,
   SlideBackground,
@@ -319,7 +339,6 @@ import { PRESET_THEMES } from '@/configs/theme'
 import { FONTS } from '@/configs/font'
 import useHistorySnapshot from '@/hooks/useHistorySnapshot'
 import useSlideTheme from '@/hooks/useSlideTheme'
-import { getImageDataURL } from '@/utils/image'
 
 import ThemeStylesExtract from './ThemeStylesExtract.vue'
 import ThemeColorsSetting from './ThemeColorsSetting.vue'
@@ -346,6 +365,7 @@ const themeStylesExtractVisible = ref(false)
 const themeColorsSettingVisible = ref(false)
 const currentGradientIndex = ref(0)
 const lineStyleOptions = ref<LineStyleType[]>(['solid', 'dashed', 'dotted'])
+const showImageManager = ref(false)
 
 const background = computed(() => {
   if (!currentSlide.value.background) {
@@ -430,11 +450,18 @@ const updateImageBackground = (props: Partial<SlideBackgroundImage>) => {
   updateBackground({ image: { ...background.value.image!, ...props } })
 }
 
-// 上传背景图片
-const uploadBackgroundImage = (files: FileList) => {
-  const imageFile = files[0]
-  if (!imageFile) return
-  getImageDataURL(imageFile).then(dataURL => updateImageBackground({ src: dataURL }))
+// 处理背景图片插入
+const handleBackgroundImageInsert = (image: any) => {
+  updateImageBackground({
+    src: image.url,
+    // 存储图片元数据
+    imageInfo: {
+      id: image.id,
+      filename: image.filename || image.original_filename,
+      cosKey: image.id
+    }
+  })
+  showImageManager.value = false
 }
 
 // 应用当前页背景到全部页面
@@ -457,6 +484,11 @@ const updateTheme = (themeProps: Partial<SlideTheme>) => {
 // 设置画布尺寸（宽高比例）
 const updateViewportRatio = (value: number) => {
   slidesStore.setViewportRatio(value)
+}
+
+// 设置画布宽度
+const updateViewportSize = (value: number) => {
+  slidesStore.setViewportSize(value)
 }
 
 const toFixed = (num: number) => {

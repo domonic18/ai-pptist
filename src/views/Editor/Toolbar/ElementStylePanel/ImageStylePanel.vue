@@ -60,11 +60,17 @@
     <ElementShadow />
     <Divider />
     
-    <FileInput @change="files => replaceImage(files)">
-      <Button class="full-width-btn"><IconTransform /> 替换图片</Button>
-    </FileInput>
+    <Button class="full-width-btn" @click="showImageManager = true"><IconTransform /> 替换图片</Button>
     <Button class="full-width-btn" @click="resetImage()"><IconUndo /> 重置样式</Button>
     <Button class="full-width-btn" @click="setBackgroundImage()"><IconTheme /> 设为背景</Button>
+    <Modal
+      :visible="showImageManager"
+      @update:visible="val => showImageManager = val"
+      :width="1200"
+      :contentStyle="{ height: '800px' }"
+    >
+      <ImageManager @insert="handleImageInsert" />
+    </Modal>
   </div>
 </template>
 
@@ -72,9 +78,9 @@
 import { type Ref, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useMainStore, useSlidesStore } from '@/store'
+import ImageManager from '@/components/image/ImageManager.vue'
 import type { PPTImageElement, SlideBackground } from '@/types/slides'
 import { CLIPPATHS } from '@/configs/imageClip'
-import { getImageDataURL, getImageSize } from '@/utils/image'
 import useHistorySnapshot from '@/hooks/useHistorySnapshot'
 
 import ElementOutline from '../common/ElementOutline.vue'
@@ -82,12 +88,12 @@ import ElementShadow from '../common/ElementShadow.vue'
 import ElementFlip from '../common/ElementFlip.vue'
 import ElementFilter from '../common/ElementFilter.vue'
 import ElementColorMask from '../common/ElementColorMask.vue'
-import FileInput from '@/components/FileInput.vue'
 import Divider from '@/components/Divider.vue'
 import Button from '@/components/Button.vue'
 import ButtonGroup from '@/components/ButtonGroup.vue'
 import Popover from '@/components/Popover.vue'
 import NumberInput from '@/components/NumberInput.vue'
+import Modal from '@/components/Modal.vue'
 
 const shapeClipPathOptions = CLIPPATHS
 const ratioClipOptions = [
@@ -126,11 +132,12 @@ const ratioClipOptions = [
 const mainStore = useMainStore()
 const slidesStore = useSlidesStore()
 const { handleElement, handleElementId } = storeToRefs(mainStore)
-const { currentSlide } = storeToRefs(slidesStore)
+const { currentSlide, viewportRatio, viewportSize } = storeToRefs(slidesStore)
 
 const handleImageElement = handleElement as Ref<PPTImageElement>
 
 const clipPanelVisible = ref(false)
+const showImageManager = ref(false)
 
 const { addHistorySnapshot } = useHistorySnapshot()
 
@@ -218,36 +225,30 @@ const presetImageClip = (shape: string, ratio = 0) => {
 }
 
 // 替换图片（保持当前的样式）
-const replaceImage = (files: FileList) => {
-  const imageFile = files[0]
-  if (!imageFile) return
-  getImageDataURL(imageFile).then(dataURL => {
-    const originWidth = handleImageElement.value.width
-    const originHeight = handleImageElement.value.height
-    const originLeft = handleImageElement.value.left
-    const originTop = handleImageElement.value.top
-    const centerX = originLeft + originWidth / 2
-    const centerY = originTop + originHeight / 2
+const handleImageInsert = (image: any) => {
+  const originWidth = handleImageElement.value.width
+  const originHeight = handleImageElement.value.height
+  const originLeft = handleImageElement.value.left
+  const originTop = handleImageElement.value.top
 
-    getImageSize(dataURL).then(({ width, height }) => {
-      const h = originHeight
-      const w = width * (originHeight / height)
-      const l = centerX - w / 2
-      const t = centerY - h / 2
-
-      slidesStore.removeElementProps({
-        id: handleElementId.value,
-        propName: 'clip',
-      })
-      updateImage({
-        src: dataURL,
-        width: w,
-        height: h,
-        left: l,
-        top: t,
-      })
-    })
+  slidesStore.removeElementProps({
+    id: handleElementId.value,
+    propName: 'clip',
   })
+  updateImage({
+    src: image.url,
+    width: originWidth,
+    height: originHeight,
+    left: originLeft,
+    top: originTop,
+    // 存储图片元数据
+    imageInfo: {
+      id: image.id,
+      filename: image.filename || image.original_filename,
+      cosKey: image.id
+    }
+  })
+  showImageManager.value = false
 }
 
 // 重置图片：清除全部样式

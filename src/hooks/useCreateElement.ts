@@ -2,11 +2,12 @@ import { storeToRefs } from 'pinia'
 import { nanoid } from 'nanoid'
 import { useMainStore, useSlidesStore } from '@/store'
 import { getImageSize } from '@/utils/image'
-import type { PPTLineElement, PPTElement, TableCell, TableCellStyle, PPTShapeElement, ChartType, PPTVideoElement, PPTAudioElement } from '@/types/slides'
+import type { PPTLineElement, PPTElement, TableCell, TableCellStyle, PPTShapeElement, ChartType } from '@/types/slides'
 import { type ShapePoolItem, SHAPE_PATH_FORMULAS } from '@/configs/shapes'
 import type { LinePoolItem } from '@/configs/lines'
 import { CHART_DEFAULT_DATA } from '@/configs/chart'
 import useHistorySnapshot from '@/hooks/useHistorySnapshot'
+import type { ImageItem } from '@/services/image'
 
 interface CommonElementPosition {
   top: number
@@ -53,33 +54,104 @@ export default () => {
 
   /**
    * 创建图片元素
-   * @param src 图片地址
+   * @param image 图片数据（ImageItem对象）
    */
-  const createImageElement = (src: string) => {
-    getImageSize(src).then(({ width, height }) => {
+  const createImageElement = (image: ImageItem) => {
+    const src = image.url
+
+    // 如果URL为空（临时图片），使用占位图
+    if (!src) {
+      const defaultWidth = 300
+      const defaultHeight = 200
+
+      createElement({
+        type: 'image',
+        id: image.id, // 使用传入的图片ID，而不是生成新的ID
+        src: '/imgs/image-placeholder.svg',
+        width: defaultWidth,
+        height: defaultHeight,
+        left: (viewportSize.value - defaultWidth) / 2,
+        top: (viewportSize.value * viewportRatio.value - defaultHeight) / 2,
+        fixedRatio: true,
+        rotate: 0,
+        // 存储图片元数据以便后续使用
+        imageInfo: {
+          id: image.id,
+          filename: image.filename || image.original_filename,
+          cosKey: image.id // COS key就是图片ID
+        }
+      })
+      return
+    }
+
+    // 如果已经有尺寸信息，直接使用
+    if (image.width && image.height) {
+      const { width, height } = image
       const scale = height / width
-  
+
+      let finalWidth = width
+      let finalHeight = height
+
       if (scale < viewportRatio.value && width > viewportSize.value) {
-        width = viewportSize.value
-        height = width * scale
+        finalWidth = viewportSize.value
+        finalHeight = finalWidth * scale
       }
       else if (height > viewportSize.value * viewportRatio.value) {
-        height = viewportSize.value * viewportRatio.value
-        width = height / scale
+        finalHeight = viewportSize.value * viewportRatio.value
+        finalWidth = finalHeight / scale
       }
 
       createElement({
         type: 'image',
         id: nanoid(10),
         src,
-        width,
-        height,
-        left: (viewportSize.value - width) / 2,
-        top: (viewportSize.value * viewportRatio.value - height) / 2,
+        width: finalWidth,
+        height: finalHeight,
+        left: (viewportSize.value - finalWidth) / 2,
+        top: (viewportSize.value * viewportRatio.value - finalHeight) / 2,
         fixedRatio: true,
         rotate: 0,
+        // 存储图片元数据以便后续使用
+        imageInfo: {
+          id: image.id,
+          filename: image.filename || image.original_filename,
+          cosKey: image.id // COS key就是图片ID
+        }
       })
-    })
+    }
+    else {
+      // 如果没有尺寸信息，使用原来的方式获取尺寸
+      getImageSize(src).then(({ width, height }) => {
+        const scale = height / width
+
+        if (scale < viewportRatio.value && width > viewportSize.value) {
+          width = viewportSize.value
+          height = width * scale
+        }
+        else if (height > viewportSize.value * viewportRatio.value) {
+          height = viewportSize.value * viewportRatio.value
+          width = height / scale
+        }
+
+        createElement({
+          type: 'image',
+          id: nanoid(10),
+          src,
+          width,
+          height,
+          left: (viewportSize.value - width) / 2,
+          top: (viewportSize.value * viewportRatio.value - height) / 2,
+          fixedRatio: true,
+          rotate: 0,
+          // 存储图片元数据
+          imageInfo: {
+            id: image.id,
+            filename: image.filename || image.original_filename,
+            cosKey: image.id
+          }
+        })
+      })
+    }
   }
   
   /**
@@ -276,8 +348,8 @@ export default () => {
    * 创建视频元素
    * @param src 视频地址
    */
-  const createVideoElement = (src: string, ext?: string) => {
-    const newElement: PPTVideoElement = {
+  const createVideoElement = (src: string) => {
+    createElement({
       type: 'video',
       id: nanoid(10),
       width: 500,
@@ -287,17 +359,15 @@ export default () => {
       top: (viewportSize.value * viewportRatio.value - 300) / 2,
       src,
       autoplay: false,
-    }
-    if (ext) newElement.ext = ext
-    createElement(newElement)
+    })
   }
   
   /**
    * 创建音频元素
    * @param src 音频地址
    */
-  const createAudioElement = (src: string, ext?: string) => {
-    const newElement: PPTAudioElement = {
+  const createAudioElement = (src: string) => {
+    createElement({
       type: 'audio',
       id: nanoid(10),
       width: 50,
@@ -310,9 +380,7 @@ export default () => {
       fixedRatio: true,
       color: theme.value.themeColors[0],
       src,
-    }
-    if (ext) newElement.ext = ext
-    createElement(newElement)
+    })
   }
 
   return {
