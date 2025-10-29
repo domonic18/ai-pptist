@@ -1,9 +1,12 @@
 <template>
   <div class="toolbar">
-    <Tabs 
-      :tabs="currentTabs" 
-      :value="toolbarState" 
-      card 
+    <div class="toolbar-header">
+      <MagicButton />
+    </div>
+    <Tabs
+      :tabs="currentTabs"
+      :value="toolbarState"
+      card
       @update:value="key => setToolbarState(key as ToolbarStates)"
     />
     <div class="content">
@@ -25,6 +28,7 @@ import SlideDesignPanel from './SlideDesignPanel/index.vue'
 import SlideAnimationPanel from './SlideAnimationPanel.vue'
 import MultiPositionPanel from './MultiPositionPanel.vue'
 import MultiStylePanel from './MultiStylePanel.vue'
+import MagicButton from './MagicButton.vue'
 import Tabs from '@/components/Tabs.vue'
 
 const mainStore = useMainStore()
@@ -89,6 +93,12 @@ const currentPanelComponent = computed(() => {
   display: flex;
   flex-direction: column;
 }
+
+.toolbar-header {
+  padding: 12px;
+  border-bottom: solid 1px $borderColor;
+}
+
 .content {
   padding: 12px;
   font-size: 13px;

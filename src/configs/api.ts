@@ -57,13 +57,13 @@ export const API_CONFIG = {
     // 删除图片标签
     DELETE: (imageId: string) => `/api/v1/images/${imageId}/tags`,
     // 删除特定图片标签
-    DELETE_SPECIFIC: (imageId: string, tag: string) => `/api/v1/images/${imageId}/tags/${tag}`,
+    DELETE_SPECIFIC: (imageId: string, tag: string) =>
+      `/api/v1/images/${imageId}/tags/${tag}`,
     // 根据标签搜索图片
     SEARCH_BY_TAGS: '/api/v1/images/search/by-tags',
     // 批量操作图片标签
     BATCH_OPERATE: '/api/v1/images/batch-tags',
   },
-
 
   // AI生成相关API
   GENERATION: {
@@ -97,6 +97,12 @@ export const API_CONFIG = {
     UPDATE: (id: string) => `/api/v1/ai-models/models/${id}`,
     // 删除AI模型
     DELETE: (id: string) => `/api/v1/ai-models/models/${id}`,
+  },
+
+  // 布局优化相关API
+  LAYOUT: {
+    // 优化幻灯片布局
+    OPTIMIZE: '/api/v1/layout/optimize',
   },
 
   // 其他API端点可以根据需要继续添加
