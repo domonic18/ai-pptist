@@ -1,7 +1,6 @@
 <template>
   <div class="toolbar">
     <div class="toolbar-header">
-      <MagicButton />
     </div>
     <Tabs
       :tabs="currentTabs"
@@ -28,7 +27,6 @@ import SlideDesignPanel from './SlideDesignPanel/index.vue'
 import SlideAnimationPanel from './SlideAnimationPanel.vue'
 import MultiPositionPanel from './MultiPositionPanel.vue'
 import MultiStylePanel from './MultiStylePanel.vue'
-import MagicButton from './MagicButton.vue'
 import Tabs from '@/components/Tabs.vue'
 
 const mainStore = useMainStore()

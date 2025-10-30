@@ -7,6 +7,10 @@
         <Divider type="vertical" style="height: 20px;" />
         <Popover class="more-icon" trigger="click" v-model:value="moreVisible" :offset="10">
           <template #content>
+            <PopoverMenuItem center @click="openOptimizeSlideDialog(); moreVisible = false">
+              <IconMagic class="icon" />
+              优化幻灯片
+            </PopoverMenuItem>
             <PopoverMenuItem center @click="toggleNotesPanel(); moreVisible = false">批注面板</PopoverMenuItem>
             <PopoverMenuItem center @click="toggleSelectPanel(); moreVisible = false">选择窗格</PopoverMenuItem>
             <PopoverMenuItem center @click="toggleSraechPanel(); moreVisible = false">查找替换</PopoverMenuItem>
@@ -16,6 +20,7 @@
         <IconComment class="handler-item" :class="{ 'active': showNotesPanel }" v-tooltip="'批注面板'" @click="toggleNotesPanel()" />
         <IconMoveOne class="handler-item" :class="{ 'active': showSelectPanel }" v-tooltip="'选择窗格'" @click="toggleSelectPanel()" />
         <IconSearch class="handler-item" :class="{ 'active': showSearchPanel }" v-tooltip="'查找/替换（Ctrl + F）'" @click="toggleSraechPanel()" />
+        <IconFiveStarBadge class="handler-item" :class="{ 'active': optimizeSlideDialogVisible }" v-tooltip="'优化幻灯片'" @click="openOptimizeSlideDialog()" />
       </div>
     </div>
 
@@ -119,6 +124,18 @@
     >
       <ImageManager @insert="handleImageInsert" />
     </Modal>
+
+    <Modal
+      v-model:visible="optimizeSlideDialogVisible"
+      :width="600"
+      :contentStyle="{ maxHeight: '80vh', overflow: 'auto' }"
+      @close="optimizeSlideDialogVisible = false"
+    >
+      <OptimizeSlideDialog
+        :visible="optimizeSlideDialogVisible"
+        @close="optimizeSlideDialogVisible = false"
+      />
+    </Modal>
   </div>
 </template>
 
@@ -141,6 +158,7 @@ import MediaInput from './MediaInput.vue'
 import LaTeXEditor from '@/components/LaTeXEditor/index.vue'
 import ImageManager from '@/components/image/ImageManager.vue'
 import FileInput from '@/components/FileInput.vue'
+import OptimizeSlideDialog from '../OptimizeSlideDialog.vue'
 import Modal from '@/components/Modal.vue'
 import Divider from '@/components/Divider.vue'
 import Popover from '@/components/Popover.vue'
@@ -195,6 +213,7 @@ const latexEditorVisible = ref(false)
 const textTypeSelectVisible = ref(false)
 const shapeMenuVisible = ref(false)
 const moreVisible = ref(false)
+const optimizeSlideDialogVisible = ref(false)
 
 // 绘制文字范围
 const drawText = (vertical = false) => {
@@ -245,6 +264,11 @@ const toggleNotesPanel = () => {
 // 打开符号面板
 const toggleSymbolPanel = () => {
   mainStore.setSymbolPanelState(!showSymbolPanel.value)
+}
+
+// 打开优化幻灯片对话框
+const openOptimizeSlideDialog = () => {
+  optimizeSlideDialogVisible.value = true
 }
 </script>
 
