@@ -20,7 +20,7 @@
         <IconComment class="handler-item" :class="{ 'active': showNotesPanel }" v-tooltip="'批注面板'" @click="toggleNotesPanel()" />
         <IconMoveOne class="handler-item" :class="{ 'active': showSelectPanel }" v-tooltip="'选择窗格'" @click="toggleSelectPanel()" />
         <IconSearch class="handler-item" :class="{ 'active': showSearchPanel }" v-tooltip="'查找/替换（Ctrl + F）'" @click="toggleSraechPanel()" />
-        <IconFiveStarBadge class="handler-item" :class="{ 'active': optimizeSlideDialogVisible }" v-tooltip="'优化幻灯片'" @click="openOptimizeSlideDialog()" />
+        <IconMagic class="handler-item" :class="{ 'active': optimizeSlideDialogVisible }" v-tooltip="'优化幻灯片'" @click="openOptimizeSlideDialog()" />
       </div>
     </div>
 
