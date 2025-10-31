@@ -1,120 +1,116 @@
 <template>
-  <div class="optimize-dialog">
-    <div class="dialog-content">
-      <!-- 标题和关闭按钮 -->
-      <div class="dialog-header">
-        <div class="dialog-title">
-          <h2>优化幻灯片提示词</h2>
-        </div>
-        <button class="close-button" @click="handleClose" title="关闭对话框">
-          <el-icon><Close /></el-icon>
-        </button>
-      </div>
+  <el-dialog
+    :model-value="visible"
+    title="优化幻灯片提示词"
+    width="600px"
+    :close-on-click-modal="false"
+    :close-on-press-escape="true"
+    @update:model-value="$emit('update:visible', $event)"
+    @close="handleClose"
+  >
+    <!-- 提示词编辑区域 -->
+    <div class="prompt-section">
+      <div class="input-container">
+        <textarea
+          ref="inputRef"
+          v-model="prompt"
+          placeholder="请输入优化幻灯片的提示词..."
+          @keydown.enter.ctrl="handleOptimize"
+          @keydown.enter.meta="handleOptimize"
+        ></textarea>
 
-      <!-- 提示词编辑区域 -->
-      <div class="prompt-section">
-        <div class="input-container">
-          <textarea
-            ref="inputRef"
-            v-model="prompt"
-            placeholder="请输入优化幻灯片的提示词..."
-            @keydown.enter.ctrl="handleOptimize"
-            @keydown.enter.meta="handleOptimize"
-          ></textarea>
-
-          <!-- 模型切换区域 -->
-          <div class="model-controls">
-            <div class="model-group">
-              <div class="model-label">对话模型</div>
-              <el-select
-                v-model="selectedChatModel"
-                class="model-select"
-                size="small"
-                :loading="modelsLoading"
-                placeholder="选择对话模型"
-              >
-                <el-option-group label="对话框模型">
-                  <el-option
-                    v-for="model in chatModelOptions"
-                    :key="model.value"
-                    :label="model.label"
-                    :value="model.value"
-                  />
-                </el-option-group>
-              </el-select>
-            </div>
-
-            <div class="model-group">
-              <div class="model-label">文生图模型</div>
-              <el-select
-                v-model="selectedImageModel"
-                class="model-select"
-                size="small"
-                :loading="modelsLoading"
-                placeholder="选择文生图模型"
-              >
-                <el-option-group label="文生图模型">
-                  <el-option
-                    v-for="model in imageModelOptions"
-                    :key="model.value"
-                    :label="model.label"
-                    :value="model.value"
-                  />
-                </el-option-group>
-              </el-select>
-            </div>
-
-            <!-- 发送给AI按钮 -->
-            <div class="send-button-container">
-              <button
-                @click="handleOptimize"
-                :disabled="!prompt.trim() || loading"
-                class="send-button"
-                title="发送给AI优化幻灯片"
-              >
-                <el-icon><Promotion /></el-icon>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 快捷提示词区域 -->
-      <div class="quick-prompts">
-        <!-- 文字相关快捷提示词 -->
-        <div class="prompt-category">
-          <div class="category-label">文字优化</div>
-          <div class="prompt-buttons">
-            <button
-              v-for="(quickPrompt, index) in textQuickPrompts"
-              :key="index"
-              @click="setPrompt(quickPrompt.text)"
-              class="prompt-button"
+        <!-- 模型切换区域 -->
+        <div class="model-controls">
+          <div class="model-group">
+            <div class="model-label">对话模型</div>
+            <el-select
+              v-model="selectedChatModel"
+              class="model-select"
+              size="small"
+              :loading="modelsLoading"
+              placeholder="选择对话模型"
             >
-              <el-icon><component :is="quickPrompt.icon" /></el-icon>
-              <span>{{ quickPrompt.label }}</span>
-            </button>
+              <el-option-group label="对话框模型">
+                <el-option
+                  v-for="model in chatModelOptions"
+                  :key="model.value"
+                  :label="model.label"
+                  :value="model.value"
+                />
+              </el-option-group>
+            </el-select>
           </div>
-        </div>
 
-        <!-- 图片相关快捷提示词 -->
-        <div class="prompt-category">
-          <div class="category-label">图像生成</div>
-          <div class="prompt-buttons">
-            <button
-              v-for="(quickPrompt, index) in imageQuickPrompts"
-              :key="index"
-              @click="setPrompt(quickPrompt.text)"
-              class="prompt-button"
+          <div class="model-group">
+            <div class="model-label">文生图模型</div>
+            <el-select
+              v-model="selectedImageModel"
+              class="model-select"
+              size="small"
+              :loading="modelsLoading"
+              placeholder="选择文生图模型"
             >
-              <el-icon><component :is="quickPrompt.icon" /></el-icon>
-              <span>{{ quickPrompt.label }}</span>
+              <el-option-group label="文生图模型">
+                <el-option
+                  v-for="model in imageModelOptions"
+                  :key="model.value"
+                  :label="model.label"
+                  :value="model.value"
+                />
+              </el-option-group>
+            </el-select>
+          </div>
+
+          <!-- 发送给AI按钮 -->
+          <div class="send-button-container">
+            <button
+              @click="handleOptimize"
+              :disabled="!prompt.trim() || loading"
+              class="send-button"
+              title="发送给AI优化幻灯片"
+            >
+              <el-icon><Promotion /></el-icon>
             </button>
           </div>
         </div>
       </div>
     </div>
-  </div>
+
+    <!-- 快捷提示词区域 -->
+    <div class="quick-prompts">
+      <!-- 文字相关快捷提示词 -->
+      <div class="prompt-category">
+        <div class="category-label">文字优化</div>
+        <div class="prompt-buttons">
+          <button
+            v-for="(quickPrompt, index) in textQuickPrompts"
+            :key="index"
+            @click="setPrompt(quickPrompt.text)"
+            class="prompt-button"
+          >
+            <el-icon><component :is="quickPrompt.icon" /></el-icon>
+            <span>{{ quickPrompt.label }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 图片相关快捷提示词 -->
+      <div class="prompt-category">
+        <div class="category-label">图像生成</div>
+        <div class="prompt-buttons">
+          <button
+            v-for="(quickPrompt, index) in imageQuickPrompts"
+            :key="index"
+            @click="setPrompt(quickPrompt.text)"
+            class="prompt-button"
+          >
+            <el-icon><component :is="quickPrompt.icon" /></el-icon>
+            <span>{{ quickPrompt.label }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </el-dialog>
 </template>
 
 <script lang="ts" setup>
@@ -125,15 +121,16 @@ import { optimizeSlideLayout } from '@/services/optimization'
 import apiService from '@/services'
 import useHistorySnapshot from '@/hooks/useHistorySnapshot'
 import message from '@/utils/message'
-import { ElSelect, ElOption, ElOptionGroup, ElIcon } from 'element-plus'
-import { MagicStick, Promotion, View, Edit, Check, Expand, Picture, Close } from '@element-plus/icons-vue'
+import { ElDialog, ElSelect, ElOption, ElOptionGroup, ElIcon, ElButton } from 'element-plus'
+import { MagicStick, Promotion, View, Edit, Check, Expand, Picture } from '@element-plus/icons-vue'
 
 const props = defineProps<{
   visible: boolean
 }>()
 
 const emit = defineEmits<{
-  close: []
+  (e: 'update:visible', value: boolean): void
+  (e: 'close'): void
 }>()
 
 const slidesStore = useSlidesStore()
@@ -175,7 +172,7 @@ const fetchAIModels = async () => {
 
     // 分类模型
     const chatModels = models.filter((m: any) =>
-      m.is_enabled && (m.supports_chat || (!m.supports_chat && !m.supports_image_generation))
+      m.is_enabled && m.supports_chat
     )
     const imageModels = models.filter((m: any) =>
       m.is_enabled && m.supports_image_generation
@@ -193,8 +190,7 @@ const fetchAIModels = async () => {
     }))
 
     // 设置默认模型 - 优先选择标记为默认的模型，否则选择第一个
-    const defaultChatModel = models.find((m: any) => m.is_default && m.is_enabled &&
-      (m.supports_chat || (!m.supports_chat && !m.supports_image_generation)))
+    const defaultChatModel = models.find((m: any) => m.is_default && m.is_enabled && m.supports_chat)
     if (defaultChatModel) {
       selectedChatModel.value = defaultChatModel.name
     } else if (chatModelOptions.value.length > 0) {
@@ -329,197 +325,133 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-.optimize-dialog {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
+.prompt-section {
+  margin-bottom: 1.5rem;
+  position: relative;
 
-  .dialog-content {
-    background-color: white;
+  .input-container {
+    border: 1px solid #bfdbfe;
     border-radius: 0.5rem;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    width: 600px;
-    padding: 1.5rem;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
 
-    .dialog-header {
+  textarea {
+    width: 100%;
+    height: 160px;
+    padding: 1rem;
+    border: none; /* 去掉独立边框 */
+    outline: none;
+    resize: none;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    box-sizing: border-box;
+
+    &:focus {
+      box-shadow: none;
+    }
+
+    &::placeholder {
+      color: #9ca3af;
+    }
+  }
+
+  .model-controls {
+    display: flex;
+    // border-top: 1px solid #bfdbfe; /* 只保留顶部边框作为分割 */
+    overflow: hidden;
+    box-sizing: border-box;
+
+    .model-group {
+      flex: 1;
       display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 1.5rem;
+      align-items: center;
 
-      .dialog-title {
-        text-align: left;
-        margin-bottom: 0;
-        flex: 1;
-
-        h2 {
-          font-size: 1.25rem;
-          font-weight: 600;
-          color: #1f2937;
-          margin: 0;
-        }
+      .model-label {
+        font-size: 0.75rem;
+        color: #6b7280;
+        padding: 0 0.5rem;
+        width: 5rem;
       }
 
-      .close-button {
+      .model-select {
+        flex: 1;
+      }
+    }
+
+    .model-group + .model-group {
+      border-left: none; /* 去掉组之间的竖线 */
+    }
+
+    .send-button-container {
+      display: flex;
+      align-items: center;
+      border-left: none; /* 去掉按钮容器的左边框 */
+      padding: 0 0.5rem;
+
+      .send-button {
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 32px;
-        height: 32px;
+        width: 2rem;
+        height: 2rem;
+        background-color: #3b82f6;
+        color: white;
+        border-radius: 50%;
         border: none;
-        background: none;
-        border-radius: 6px;
         cursor: pointer;
-        color: #6b7280;
-        transition: all 0.2s ease;
+        transition: background-color 0.2s ease;
+        white-space: nowrap;
+
+        &:hover:not(:disabled) {
+          background-color: #2563eb;
+        }
+
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+      }
+    }
+  }
+}
+
+.quick-prompts {
+  margin-bottom: 1.5rem;
+
+  .prompt-category {
+    margin-bottom: 1rem;
+
+    .category-label {
+      font-size: 0.875rem; /* 增大分组文字大小 */
+      color: #6b7280;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+
+    .prompt-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+
+      .prompt-button {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        color: #3b82f6;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 0.75rem; /* 减小快捷文字大小 */
+        white-space: nowrap;
+        transition: color 0.2s ease;
+        border-radius: 6px;
+        padding: 0.25rem 0.5rem;
 
         &:hover {
-          background-color: #f3f4f6;
-          color: #374151;
-        }
-
-        .el-icon {
-          font-size: 18px;
-        }
-      }
-    }
-
-    .prompt-section {
-      margin-bottom: 1.5rem;
-      position: relative;
-
-      .input-container {
-        border: 1px solid #bfdbfe;
-        border-radius: 0.5rem;
-        overflow: hidden;
-        box-sizing: border-box;
-      }
-
-      textarea {
-        width: 100%;
-        height: 160px;
-        padding: 1rem;
-        border: none; /* 去掉独立边框 */
-        outline: none;
-        resize: none;
-        font-family: inherit;
-        font-size: 14px;
-        line-height: 1.5;
-        box-sizing: border-box;
-
-        &:focus {
-          box-shadow: none;
-        }
-
-        &::placeholder {
-          color: #9ca3af;
-        }
-      }
-
-      .model-controls {
-        display: flex;
-        // border-top: 1px solid #bfdbfe; /* 只保留顶部边框作为分割 */
-        overflow: hidden;
-        box-sizing: border-box;
-
-        .model-group {
-          flex: 1;
-          display: flex;
-          align-items: center;
-
-          .model-label {
-            font-size: 0.75rem;
-            color: #6b7280;
-            padding: 0 0.5rem;
-            width: 5rem;
-          }
-
-          .model-select {
-            flex: 1;
-          }
-        }
-
-        .model-group + .model-group {
-          border-left: none; /* 去掉组之间的竖线 */
-        }
-
-        .send-button-container {
-          display: flex;
-          align-items: center;
-          border-left: none; /* 去掉按钮容器的左边框 */
-          padding: 0 0.5rem;
-
-          .send-button {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 2rem;
-            height: 2rem;
-            background-color: #3b82f6;
-            color: white;
-            border-radius: 50%;
-            border: none;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-            white-space: nowrap;
-
-            &:hover:not(:disabled) {
-              background-color: #2563eb;
-            }
-
-            &:disabled {
-              opacity: 0.5;
-              cursor: not-allowed;
-            }
-          }
-        }
-      }
-    }
-
-    .quick-prompts {
-      margin-bottom: 1.5rem;
-
-      .prompt-category {
-        margin-bottom: 1rem;
-
-        .category-label {
-          font-size: 0.875rem; /* 增大分组文字大小 */
-          color: #6b7280;
-          margin-bottom: 0.5rem;
-          font-weight: 500;
-        }
-
-        .prompt-buttons {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 0.5rem;
-
-          .prompt-button {
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-            color: #3b82f6;
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 0.75rem; /* 减小快捷文字大小 */
-            white-space: nowrap;
-            transition: color 0.2s ease;
-            border-radius: 6px;
-            padding: 0.25rem 0.5rem;
-
-            &:hover {
-              color: #1d4ed8;
-              background-color: #eff6ff;
-            }
-          }
+          color: #1d4ed8;
+          background-color: #eff6ff;
         }
       }
     }

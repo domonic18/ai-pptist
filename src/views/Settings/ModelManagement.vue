@@ -95,6 +95,7 @@
     v-model="drawerVisible"
     :title="drawerType === 'add' ? '新增模型' : '编辑模型'"
     size="1200px"
+    :close-on-click-modal="false"
     destroy-on-close
   >
     <div class="p-4">
@@ -393,12 +394,37 @@ export default defineComponent({
       })
     }
 
-    const handleCopy = (row: ModelData) => {
-      const copyData = { ...row }
-      copyData.name = `${copyData.name} - 副本`
-      copyData.id = Date.now().toString()
-      copyData.createTime = new Date().toISOString()
-      openDrawer('add', copyData)
+    const handleCopy = async (row: ModelData) => {
+      try {
+        // 获取完整的模型详情（包含API密钥等敏感信息）
+        const modelDetail = await apiService.getAIModelDetail(row.id)
+        const copyData = {
+          id: '',
+          name: `${modelDetail.name} - 副本`,
+          type: modelDetail.supports_image_generation ? 'image' : 'text',
+          provider: modelDetail.provider || 'openai',
+          baseUrl: modelDetail.base_url || '',
+          apiKey: modelDetail.api_key || '',
+          modelName: modelDetail.ai_model_name || '',
+          parameters: modelDetail.parameters || '',
+          maxTokens: modelDetail.max_tokens || '8192',
+          isEnabled: modelDetail.is_enabled,
+          isDefault: false, // 复制时默认不设为默认模型
+          createTime: ''
+        } as ModelData
+        openDrawer('add', copyData)
+      }
+      catch (error) {
+        console.error('获取模型详情失败:', error)
+        // 如果获取详情失败，使用列表中的基本信息（不包含API_KEY）
+        const copyData = { ...row }
+        copyData.name = `${copyData.name} - 副本`
+        copyData.id = ''
+        copyData.isDefault = false
+        copyData.createTime = ''
+        openDrawer('add', copyData)
+        ElMessage.warning('无法获取完整模型信息，部分字段需要手动填写')
+      }
     }
 
     const handleCurrentChange = (page: number) => {

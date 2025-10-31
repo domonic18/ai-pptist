@@ -1,9 +1,10 @@
 <template>
   <el-dialog
-    v-model="visible"
+    :model-value="visible"
     title="图片预览"
     width="80%"
     :before-close="handleClose"
+    @update:model-value="$emit('update:visible', $event)"
     class="preview-modal"
   >
     <div v-if="previewImage" class="preview-content">

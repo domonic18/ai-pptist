@@ -1,9 +1,10 @@
 <template>
   <el-dialog
-    v-model="visible"
+    :model-value="visible"
     title="批量设置标签"
     width="600px"
     :close-on-click-modal="false"
+    @update:model-value="$emit('update:visible', $event)"
     @close="handleClose"
   >
     <div class="batch-tag-modal">

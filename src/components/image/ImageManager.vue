@@ -65,6 +65,7 @@
       v-model="deleteConfirmVisible"
       title="确认删除"
       width="400px"
+      :close-on-click-modal="false"
     >
       <div class="delete-confirm-content">
         <p>确定要删除选中的 {{ imagesToDelete.length }} 张图片吗？</p>
