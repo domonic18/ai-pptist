@@ -316,7 +316,25 @@ export default defineComponent({
           } as ModelData
         }
       }
+      else if (type === 'add' && row) {
+        // 复制功能：使用传入的row数据填充表单
+        modelForm.value = {
+          id: '',
+          name: row.name,
+          type: row.type,
+          provider: row.provider || 'openai',
+          baseUrl: row.baseUrl,
+          apiKey: row.apiKey || '',
+          modelName: row.modelName,
+          parameters: row.parameters,
+          maxTokens: row.maxTokens,
+          isEnabled: row.isEnabled,
+          isDefault: false, // 复制时默认不设为默认模型
+          createTime: ''
+        } as ModelData
+      }
       else {
+        // 完全新增：使用空表单
         modelForm.value = {
           id: '',
           name: '',
