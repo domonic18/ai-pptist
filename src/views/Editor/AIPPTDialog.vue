@@ -177,16 +177,16 @@ const fetchAIModels = async () => {
   try {
     const models = await apiService.getAIModels()
 
-    // 过滤启用的模型并转换为选项格式
+    // 过滤启用的对话模型并转换为选项格式
     modelOptions.value = models
-      .filter(m => m.is_enabled)
+      .filter(m => m.is_enabled && m.supports_chat)
       .map(m => ({
         label: m.name,
         value: m.name
       }))
 
-    // 设置默认模型
-    const defaultModel = models.find((m: any) => m.is_default && m.is_enabled)
+    // 设置默认模型 - 优先选择标记为默认的对话模型，否则选择第一个对话模型
+    const defaultModel = models.find((m: any) => m.is_default && m.is_enabled && m.supports_chat)
     if (defaultModel) {
       model.value = defaultModel.name
     }
