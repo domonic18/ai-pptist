@@ -77,7 +77,7 @@
             {{ image.prompt }}
           </div>
           <div class="image-meta">
-            <span class="model-name">{{ image.model_name }}</span>
+            <span class="model-name">{{ image.generation_model }}</span>
             <span class="timestamp">{{ formatTime(image.timestamp) }}</span>
           </div>
         </div>

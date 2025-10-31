@@ -33,7 +33,7 @@
           </div>
           <div class="info-item">
             <span class="label">模型：</span>
-            <span class="value">{{ previewImage.model_name }}</span>
+            <span class="value">{{ previewImage.generation_model }}</span>
           </div>
           <div class="info-item">
             <span class="label">尺寸：</span>

@@ -83,7 +83,7 @@ const previewVisible = ref(false)
 // 表单数据
 const generationForm = ref<GenerationForm>({
   prompt: '',
-  model_name: '',
+  generation_model: '',
   width: 1024,
   height: 1024,
   quality: 'standard',
@@ -144,7 +144,7 @@ const generateImage = async () => {
     ElMessage.warning('请输入图片描述')
     return
   }
-  if (!generationForm.value.model_name) {
+  if (!generationForm.value.generation_model) {
     ElMessage.warning('请选择生成模型')
     return
   }
@@ -154,7 +154,7 @@ const generateImage = async () => {
     id: imageId,
     url: '',
     prompt: generationForm.value.prompt.trim(),
-    model_name: generationForm.value.model_name,
+    generation_model: generationForm.value.generation_model,
     width: generationForm.value.width,
     height: generationForm.value.height,
     status: 'generating',
@@ -167,7 +167,7 @@ const generateImage = async () => {
 
   addLog('info', '开始图片生成流程')
   addLog('info', `提示词: ${generationForm.value.prompt}`)
-  addLog('info', `模型: ${generationForm.value.model_name}`)
+  addLog('info', `模型: ${generationForm.value.generation_model}`)
   addLog('info', `尺寸: ${generationForm.value.width}×${generationForm.value.height}`)
 
   try {
@@ -240,7 +240,7 @@ const handleStoreImage = async (image: GeneratedImage) => {
 
     const requestData = {
       prompt: image.prompt,
-      model_name: image.model_name,
+      generation_model: image.generation_model,
       width: image.width,
       height: image.height,
       description: `AI生成图片 - ${image.prompt.substring(0, 50)}...`,
@@ -249,7 +249,7 @@ const handleStoreImage = async (image: GeneratedImage) => {
     }
 
     addLog('info', `入库图片提示词: ${image.prompt}`)
-    addLog('info', `入库图片模型: ${image.model_name}`)
+    addLog('info', `入库图片模型: ${image.generation_model}`)
     addLog('info', `入库图片尺寸: ${image.width}×${image.height}`)
 
     const response = await axios.post(API_CONFIG.IMAGE_GENERATION.GENERATE_AND_STORE, requestData)
@@ -329,7 +329,7 @@ const loadModels = async () => {
     // 设置默认模型
     const defaultModel = models.find((m: any) => m.is_default && m.is_enabled)
     if (defaultModel) {
-      generationForm.value.model_name = defaultModel.model_name || defaultModel.name
+      generationForm.value.generation_model = defaultModel.ai_model_name || defaultModel.name
     }
 
     addLog('info', `成功加载 ${availableModels.value.length} 个可用模型`)

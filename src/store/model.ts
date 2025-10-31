@@ -23,7 +23,7 @@ interface BackendModelData {
   provider: string
   base_url?: string
   api_key?: string
-  model_name?: string
+  ai_model_name?: string
   parameters?: string
   max_tokens?: string
   is_enabled: boolean
@@ -48,7 +48,7 @@ export const useModelStore = defineStore('model', () => {
       provider: model.provider,
       baseUrl: model.base_url || '',
       apiKey: model.api_key || '',
-      modelName: model.model_name || '',
+      modelName: model.ai_model_name || '',
       parameters: model.parameters || '',
       maxTokens: model.max_tokens || '8192',
       isEnabled: model.is_enabled,
@@ -64,7 +64,7 @@ export const useModelStore = defineStore('model', () => {
       provider: model.provider,
       base_url: model.baseUrl,
       api_key: model.apiKey,
-      model_name: model.modelName,
+      ai_model_name: model.modelName,
       parameters: model.parameters,
       max_tokens: model.maxTokens,
       is_enabled: model.isEnabled,
@@ -88,7 +88,7 @@ export const useModelStore = defineStore('model', () => {
       provider: createdModel.provider,
       baseUrl: createdModel.base_url || '',
       apiKey: createdModel.api_key || '',
-      modelName: createdModel.model_name || '',
+      modelName: createdModel.ai_model_name || '',
       parameters: createdModel.parameters || '',
       maxTokens: createdModel.max_tokens || '8192',
       isEnabled: createdModel.is_enabled,
@@ -106,7 +106,7 @@ export const useModelStore = defineStore('model', () => {
       provider: updatedModel.provider,
       base_url: updatedModel.baseUrl,
       api_key: updatedModel.apiKey,
-      model_name: updatedModel.modelName,
+      ai_model_name: updatedModel.modelName,
       parameters: updatedModel.parameters,
       max_tokens: updatedModel.maxTokens,
       is_enabled: updatedModel.isEnabled,

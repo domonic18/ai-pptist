@@ -290,7 +290,7 @@ export default defineComponent({
             provider: modelDetail.provider || 'openai',
             baseUrl: modelDetail.base_url || '',
             apiKey: modelDetail.api_key || '',
-            modelName: modelDetail.model_name || '',
+            modelName: modelDetail.ai_model_name || '',
             parameters: modelDetail.parameters || '',
             maxTokens: modelDetail.max_tokens || '8192',
             isEnabled: modelDetail.is_enabled,

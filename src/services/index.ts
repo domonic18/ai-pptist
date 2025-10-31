@@ -38,7 +38,7 @@ interface AIModel {
   is_default: boolean
   base_url?: string
   api_key?: string
-  model_name?: string
+  ai_model_name?: string
   parameters?: string
   max_tokens?: string
   supports_image_generation?: boolean
@@ -54,7 +54,7 @@ interface AIModelCreate {
   provider: string
   base_url?: string
   api_key?: string
-  model_name?: string
+  ai_model_name?: string
   parameters?: string
   max_tokens?: string
   is_enabled?: boolean
@@ -71,7 +71,7 @@ interface AIModelUpdate {
   provider?: string
   base_url?: string
   api_key?: string
-  model_name?: string
+  ai_model_name?: string
   parameters?: string
   max_tokens?: string
   is_enabled?: boolean

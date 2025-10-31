@@ -21,7 +21,7 @@ export interface ImageItem {
   created_at: string
   updated_at?: string
   source_type?: string // 图片来源类型：'generated' | 'uploaded'
-  model_name?: string // 如果是AI生成，使用的模型名称
+  generation_model?: string // 如果是AI生成，使用的模型名称
   cos_key?: string // COS存储键
   cos_bucket?: string // COS存储桶
   cos_region?: string // COS地域

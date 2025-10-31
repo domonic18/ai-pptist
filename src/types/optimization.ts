@@ -17,6 +17,7 @@ export interface OptimizationRequest {
     keep_fonts?: boolean;
     style?: 'professional' | 'creative' | 'minimal';
   };
+  user_prompt?: string;
 }
 
 /**

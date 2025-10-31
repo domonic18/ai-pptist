@@ -68,6 +68,7 @@ export async function optimizeSlideLayout(
   elements: PPTElement[],
   canvasSize: { width: number; height: number },
   options?: OptimizationRequest['options'],
+  userPrompt?: string
 ): Promise<OptimizationResponse> {
   try {
     // 精简元素数据
@@ -79,6 +80,7 @@ export async function optimizeSlideLayout(
       elements: simplifiedElements,
       canvas_size: canvasSize,
       options,
+      user_prompt: userPrompt,
     }
 
     // 使用API_CONFIG统一管理的端点

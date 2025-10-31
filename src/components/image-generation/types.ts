@@ -4,7 +4,7 @@
 
 export interface GenerationForm {
   prompt: string
-  model_name: string
+  generation_model: string
   width: number
   height: number
   quality: string
@@ -21,7 +21,7 @@ export interface ModelInfo {
   provider: string
   is_enabled: boolean
   is_default: boolean
-  model_name?: string
+  ai_model_name?: string
   base_url?: string
   api_key?: string
   parameters?: string
@@ -33,7 +33,7 @@ export interface GeneratedImage {
   id: string
   url: string
   prompt: string
-  model_name: string
+  generation_model: string
   width: number
   height: number
   status: 'generating' | 'success' | 'error'

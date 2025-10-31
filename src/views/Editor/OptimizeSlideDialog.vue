@@ -154,7 +154,7 @@ const imageModelOptions = ref<Array<{ label: string; value: string }>>([])
 
 // 文字相关快捷提示词列表
 const textQuickPrompts = [
-  { label: '尝试新的布局', text: '重新设计幻灯片布局，使其更具视觉吸引力', icon: View },
+  { label: '尝试新的布局', text: '重新设计幻灯片布局，使其更具视觉吸引力。文字内容不要修改。', icon: View },
   { label: '改进写作', text: '优化幻灯片内容的表达方式，使其更清晰易懂', icon: Edit },
   { label: '修正拼写和语法', text: '检查并修正幻灯片中的拼写和语法错误', icon: Check },
   { label: '翻译', text: '将幻灯片内容翻译成英文', icon: MagicStick },
@@ -272,7 +272,9 @@ const handleOptimize = async () => {
       {
         width: viewportSize.value,
         height: viewportSize.value * viewportRatio.value,
-      }
+      },
+      undefined,
+      prompt.value.trim()
     )
 
     if (response.status === 'success' && response.data) {
