@@ -832,6 +832,7 @@ export interface SlideTemplate {
   name: string;
   id: string;
   cover: string;
+  origin?: string;
 }
 
 // 前向声明，避免循环依赖
