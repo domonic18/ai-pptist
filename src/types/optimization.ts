@@ -18,6 +18,10 @@ export interface OptimizationRequest {
     style?: 'professional' | 'creative' | 'minimal';
   };
   user_prompt?: string;
+  ai_model_config?: {
+    model?: string;
+    [key: string]: any;
+  };
 }
 
 /**

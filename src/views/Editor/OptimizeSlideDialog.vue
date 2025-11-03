@@ -7,7 +7,27 @@
     :close-on-press-escape="true"
     @update:model-value="$emit('update:visible', $event)"
     @close="handleClose"
+    :before-close="handleBeforeClose"
   >
+    <!-- 优化中状态 -->
+    <div v-if="optimizing" class="optimizing-overlay">
+      <div class="optimizing-content">
+        <el-icon class="loading-icon"><Loading /></el-icon>
+        <div class="optimizing-text">AI正在优化幻灯片，请稍候...</div>
+        <div class="optimizing-tip">优化完成后将自动更新幻灯片内容</div>
+        <el-button
+          type="danger"
+          size="small"
+          @click="handleCancelOptimize"
+          class="cancel-button"
+        >
+          取消优化
+        </el-button>
+      </div>
+    </div>
+
+    <!-- 正常状态 -->
+    <div v-else>
     <!-- 提示词编辑区域 -->
     <div class="prompt-section">
       <div class="input-container">
@@ -109,6 +129,7 @@
           </button>
         </div>
       </div>
+      </div>
     </div>
   </el-dialog>
 </template>
@@ -122,7 +143,7 @@ import apiService from '@/services'
 import useHistorySnapshot from '@/hooks/useHistorySnapshot'
 import message from '@/utils/message'
 import { ElDialog, ElSelect, ElOption, ElOptionGroup, ElIcon, ElButton } from 'element-plus'
-import { MagicStick, Promotion, View, Edit, Check, Expand, Picture } from '@element-plus/icons-vue'
+import { MagicStick, Promotion, View, Edit, Check, Expand, Picture, Loading } from '@element-plus/icons-vue'
 
 const props = defineProps<{
   visible: boolean
@@ -140,6 +161,8 @@ const { addHistorySnapshot } = useHistorySnapshot()
 // 状态
 const prompt = ref('')
 const loading = ref(false)
+const optimizing = ref(false)
+const optimizeTimeout = ref<number | null>(null)
 const inputRef = useTemplateRef<HTMLTextAreaElement>('inputRef')
 
 // 模型相关
@@ -233,6 +256,16 @@ const handleClose = () => {
   emit('close')
 }
 
+// 处理对话框关闭前
+const handleBeforeClose = (done: () => void) => {
+  if (optimizing.value) {
+    // 优化中不允许关闭
+    message.warning('优化进行中，请等待完成或取消优化')
+    return
+  }
+  done()
+}
+
 // 设置提示词
 const setPrompt = (text: string) => {
   if (prompt.value) {
@@ -241,6 +274,40 @@ const setPrompt = (text: string) => {
     prompt.value = text
   }
   inputRef.value?.focus()
+}
+
+// 处理优化超时
+const handleOptimizeTimeout = () => {
+  optimizing.value = false
+  loading.value = false
+
+  // 清理超时定时器
+  if (optimizeTimeout.value) {
+    clearTimeout(optimizeTimeout.value)
+    optimizeTimeout.value = null
+  }
+
+  message.error('优化超时，请检查网络连接或稍后重试')
+
+  // 重新打开对话框
+  emit('update:visible', true)
+}
+
+// 处理取消优化
+const handleCancelOptimize = () => {
+  optimizing.value = false
+  loading.value = false
+
+  // 清理超时定时器
+  if (optimizeTimeout.value) {
+    clearTimeout(optimizeTimeout.value)
+    optimizeTimeout.value = null
+  }
+
+  message.info('已取消优化')
+
+  // 重新打开对话框
+  emit('update:visible', true)
 }
 
 // 处理优化请求
@@ -255,7 +322,17 @@ const handleOptimize = async () => {
     return
   }
 
+  // 立即关闭对话框，显示优化中状态
+  emit('update:visible', false)
+  optimizing.value = true
   loading.value = true
+
+  // 设置超时处理（120秒超时）
+  optimizeTimeout.value = setTimeout(() => {
+    if (optimizing.value) {
+      handleOptimizeTimeout()
+    }
+  }, 120000) as unknown as number
 
   try {
     // 添加历史快照
@@ -270,7 +347,10 @@ const handleOptimize = async () => {
         height: viewportSize.value * viewportRatio.value,
       },
       undefined,
-      prompt.value.trim()
+      prompt.value.trim(),
+      {
+        model: selectedChatModel.value
+      }
     )
 
     if (response.status === 'success' && response.data) {
@@ -307,14 +387,26 @@ const handleOptimize = async () => {
       })
 
       message.success('幻灯片优化完成！')
+
+      // 优化成功后完全关闭对话框，不重新打开
       emit('close')
     } else {
       throw new Error(response.message || '优化失败')
     }
   } catch (error: any) {
+    console.error('优化失败:', error)
     message.error(`优化失败：${error.message}`)
+
+    // 优化失败时重新打开对话框
+    emit('update:visible', true)
   } finally {
+    // 清理状态
+    optimizing.value = false
     loading.value = false
+    if (optimizeTimeout.value) {
+      clearTimeout(optimizeTimeout.value)
+      optimizeTimeout.value = null
+    }
   }
 }
 
@@ -455,6 +547,60 @@ onMounted(() => {
         }
       }
     }
+  }
+}
+
+/* 优化中状态样式 */
+.optimizing-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  border-radius: 8px;
+}
+
+.optimizing-content {
+  text-align: center;
+  padding: 2rem;
+  max-width: 300px;
+}
+
+.loading-icon {
+  font-size: 3rem;
+  color: #3b82f6;
+  margin-bottom: 1rem;
+  animation: spin 1s linear infinite;
+}
+
+.optimizing-text {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+}
+
+.optimizing-tip {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-bottom: 1.5rem;
+}
+
+.cancel-button {
+  margin-top: 1rem;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
   }
 }
 
