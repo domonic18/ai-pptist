@@ -100,6 +100,9 @@ export const useModelStore = defineStore('model', () => {
   }
 
   const updateModel = async (updatedModel: ModelData) => {
+    // 获取当前模型的详细信息，以保留原有的能力配置
+    const currentModelDetail = await apiService.getAIModelDetail(updatedModel.id)
+
     // Convert to backend format
     const backendModel = {
       name: updatedModel.name,
@@ -111,12 +114,13 @@ export const useModelStore = defineStore('model', () => {
       max_tokens: updatedModel.maxTokens,
       is_enabled: updatedModel.isEnabled,
       is_default: updatedModel.isDefault,
-      // Convert frontend type to backend capability fields
+      // 保留原有的能力配置，只更新类型相关的字段
       supports_image_generation: updatedModel.type === 'image',
       supports_chat: updatedModel.type === 'text',
-      supports_embeddings: false,
-      supports_vision: false,
-      supports_tools: false
+      // 保留其他能力配置
+      supports_embeddings: currentModelDetail.supports_embeddings || false,
+      supports_vision: currentModelDetail.supports_vision || false,
+      supports_tools: currentModelDetail.supports_tools || false
     }
 
     // Call backend API to update model

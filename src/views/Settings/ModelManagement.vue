@@ -100,8 +100,19 @@
   >
     <div class="p-4">
       <el-form ref="formRef" :model="modelForm" :rules="rules" label-width="100px">
-        <el-form-item label="模型名称" prop="name">
-          <el-input v-model="modelForm.name" placeholder="请输入模型名称" />
+        <el-form-item label="显示名称" prop="name">
+          <el-input v-model="modelForm.name" placeholder="请输入模型显示名称" />
+          <template #label>
+            <span class="flex items-center">
+              显示名称
+              <el-tooltip
+                content="在前端界面中显示的模型名称，便于用户识别"
+                placement="top"
+              >
+                <el-icon class="ml-1 cursor-help"><QuestionFilled /></el-icon>
+              </el-tooltip>
+            </span>
+          </template>
         </el-form-item>
         <el-form-item label="模型类型" prop="type">
           <el-select
@@ -147,6 +158,17 @@
         </el-form-item>
         <el-form-item label="模型名称" prop="modelName">
           <el-input v-model="modelForm.modelName" placeholder="请输入具体的模型名称" />
+          <template #label>
+            <span class="flex items-center">
+              模型名称
+              <el-tooltip
+                content="调用模型API时实际使用的模型名称，如：gpt-4、qwen-turbo等"
+                placement="top"
+              >
+                <el-icon class="ml-1 cursor-help"><QuestionFilled /></el-icon>
+              </el-tooltip>
+            </span>
+          </template>
         </el-form-item>
         <el-form-item label="最大Token数" prop="maxTokens">
           <el-input
@@ -173,9 +195,9 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, onMounted } from 'vue'
+import { defineComponent, ref, computed, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Plus, Edit, Delete, CopyDocument } from '@element-plus/icons-vue'
+import { Search, Plus, Edit, Delete, CopyDocument, QuestionFilled } from '@element-plus/icons-vue'
 import { useModelStore, type ModelData } from '../../store/model'
 import apiService from '../../services'
 
@@ -284,6 +306,7 @@ export default defineComponent({
         try {
           // 获取完整的模型详情（包含API密钥等敏感信息）
           const modelDetail = await apiService.getAIModelDetail(row.id)
+
           modelForm.value = {
             id: modelDetail.id,
             name: modelDetail.name,
@@ -300,11 +323,15 @@ export default defineComponent({
           } as ModelData
         }
         catch (error) {
-          // 如果获取详情失败，使用列表中的基本信息
+          console.error('获取模型详情失败:', error)
+          // 如果获取详情失败，确保使用正确的类型
+          // 优先使用row中的type，如果不存在则根据supports_image_generation判断
+          const modelType = row.type || (row.supports_image_generation ? 'image' : 'text')
+
           modelForm.value = {
             id: row.id,
             name: row.name,
-            type: row.type,
+            type: modelType,
             provider: row.provider || 'openai',
             baseUrl: row.baseUrl,
             apiKey: row.apiKey || '', // 使用空字符串作为默认值
@@ -507,7 +534,8 @@ export default defineComponent({
       Plus,
       Edit,
       Delete,
-      CopyDocument
+      CopyDocument,
+      QuestionFilled
     }
   }
 })
