@@ -273,6 +273,15 @@ export async function processContentSlide(
   const itemsWithTitle = item.data.items.filter(item => item.title && item.title.trim())
   const itemsWithoutTitle = item.data.items.filter(item => !item.title || !item.title.trim())
 
+  console.log('[Enhanced Processor] 配对前数据:', {
+    titleElements: titleElements.length,
+    textElements: textElements.length,
+    itemsWithTitle: itemsWithTitle.length,
+    itemsWithoutTitle: itemsWithoutTitle.length,
+    itemsWithTitleData: itemsWithTitle,
+    itemsWithoutTitleData: itemsWithoutTitle
+  })
+
   // 构建智能配对映射
   const pairedElements = buildPairedElements(
     titleElements,
@@ -280,6 +289,8 @@ export async function processContentSlide(
     itemsWithTitle,
     itemsWithoutTitle
   )
+
+  console.log('[Enhanced Processor] 配对结果:', pairedElements)
 
   const sortedNumberItemIds = contentTemplate.elements.filter(el => checkTextType(el, 'itemNumber')).sort((a, b) => {
     const aIndex = a.left + a.top * 2
@@ -327,25 +338,30 @@ export async function processContentSlide(
       if (checkTextType(el, 'item')) {
         // 从配对结果中查找对应的数据项
         const paired = pairedElements.find(pair => pair.text.id === el.id)
+        console.log('[Enhanced Processor] 处理item元素:', {
+          elementId: el.id,
+          paired: paired ? { hasDataItem: !!paired.dataItem, dataItemText: paired.dataItem?.text } : null
+        })
         if (paired && paired.dataItem) {
           const text = paired.dataItem.text || ''
+          console.log('[Enhanced Processor] 准备替换文本:', { elementId: el.id, text })
           // 即使text为空，也要保留元素（避免删除模板元素）
           // 如果text为空，使用空字符串替换
           if (text.trim()) {
-            return getNewTextElement({ 
-              el: el as PPTTextElement | PPTShapeElement, 
-              text, 
-              longestText, 
-              maxLine: 4 
+            return getNewTextElement({
+              el: el as PPTTextElement | PPTShapeElement,
+              text,
+              longestText,
+              maxLine: 4
             })
           }
           // text为空时，可以选择保留原内容或清空
           // 这里选择清空以保持一致性
-          return getNewTextElement({ 
-            el: el as PPTTextElement | PPTShapeElement, 
-            text: '', 
-            longestText, 
-            maxLine: 4 
+          return getNewTextElement({
+            el: el as PPTTextElement | PPTShapeElement,
+            text: '',
+            longestText,
+            maxLine: 4
           })
         }
       }
@@ -420,7 +436,7 @@ export async function processEndSlide(
 /**
  * 构建配对元素列表
  * 根据布局类型选择合适的配对策略
- * 
+ *
  * @param titleElements - 标题元素列表
  * @param textElements - 正文元素列表
  * @param itemsWithTitle - 有标题的数据项列表
@@ -433,8 +449,16 @@ function buildPairedElements(
   itemsWithTitle: any[],
   itemsWithoutTitle: any[]
 ) {
+  console.log('[buildPairedElements] 开始构建配对元素', {
+    titleElements: titleElements.length,
+    textElements: textElements.length,
+    itemsWithTitle: itemsWithTitle.length,
+    itemsWithoutTitle: itemsWithoutTitle.length
+  })
+
   // 1. 检测布局模式并分组元素
   const layoutAnalysis = analyzeTemplateLayout(titleElements, textElements)
+  console.log('[buildPairedElements] 布局分析结果:', layoutAnalysis)
 
   // 2. 根据布局模式进行智能配对
   if (layoutAnalysis.layoutType === 'comparison') {
@@ -445,7 +469,7 @@ function buildPairedElements(
       itemsWithoutTitle
     )
   }
-  
+
   if (layoutAnalysis.layoutType === 'horizontal_list') {
     // 水平列表布局模式
     return pairHorizontalListLayout(
@@ -454,14 +478,16 @@ function buildPairedElements(
       itemsWithoutTitle
     )
   }
-  
+
   // 通用布局模式（降级到原有算法）
-  return pairGenericLayout(
+  const result = pairGenericLayout(
     titleElements,
     textElements,
     itemsWithTitle,
     itemsWithoutTitle
   )
+  console.log('[buildPairedElements] 通用布局配对结果:', result)
+  return result
 }
 
 // 导出内部函数用于测试（从模块中重新导出）
