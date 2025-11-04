@@ -22,6 +22,7 @@ export interface OptimizationRequest {
     model?: string;
     [key: string]: any;
   };
+  temperature?: number; // 温度参数（0.0-2.0），控制生成多样性
 }
 
 /**

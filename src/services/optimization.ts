@@ -69,7 +69,8 @@ export async function optimizeSlideLayout(
   canvasSize: { width: number; height: number },
   options?: OptimizationRequest['options'],
   userPrompt?: string,
-  modelConfig?: OptimizationRequest['ai_model_config']
+  modelConfig?: OptimizationRequest['ai_model_config'],
+  temperature?: number
 ): Promise<OptimizationResponse> {
   try {
     // 精简元素数据
@@ -83,6 +84,7 @@ export async function optimizeSlideLayout(
       options,
       user_prompt: userPrompt,
       ai_model_config: modelConfig,
+      temperature,
     }
 
     // 使用API_CONFIG统一管理的端点
