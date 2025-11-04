@@ -93,6 +93,34 @@
             </button>
           </div>
         </div>
+
+        <!-- Temperature调节区域 -->
+        <div class="temperature-controls">
+          <div class="temperature-group">
+            <div class="temperature-label">
+              <span>生成多样性</span>
+              <el-tooltip
+                content="控制AI生成内容的多样性。较低值（如0.2）更确定，较高值（如1.0）更随机"
+                placement="top"
+              >
+                <el-icon class="info-icon"><InfoFilled /></el-icon>
+              </el-tooltip>
+            </div>
+            <div class="temperature-slider-container">
+              <el-slider
+                v-model="temperature"
+                :min="0.0"
+                :max="2.0"
+                :step="0.1"
+                :format-tooltip="formatTemperatureTooltip"
+                show-stops
+                :marks="temperatureMarks"
+                class="temperature-slider"
+              />
+              <div class="temperature-value">{{ temperature.toFixed(1) }}</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -142,8 +170,8 @@ import { optimizeSlideLayout } from '@/services/optimization'
 import apiService from '@/services'
 import useHistorySnapshot from '@/hooks/useHistorySnapshot'
 import message from '@/utils/message'
-import { ElDialog, ElSelect, ElOption, ElOptionGroup, ElIcon, ElButton } from 'element-plus'
-import { MagicStick, Promotion, View, Edit, Check, Expand, Picture, Loading } from '@element-plus/icons-vue'
+import { ElDialog, ElSelect, ElOption, ElOptionGroup, ElIcon, ElButton, ElSlider, ElTooltip } from 'element-plus'
+import { MagicStick, Promotion, View, Edit, Check, Expand, Picture, Loading, InfoFilled } from '@element-plus/icons-vue'
 
 const props = defineProps<{
   visible: boolean
@@ -164,6 +192,15 @@ const loading = ref(false)
 const optimizing = ref(false)
 const optimizeTimeout = ref<number | null>(null)
 const inputRef = useTemplateRef<HTMLTextAreaElement>('inputRef')
+
+// Temperature相关状态
+const temperature = ref(0.7) // 默认值，与后端配置保持一致
+const temperatureMarks = {
+  0.0: '确定',
+  0.7: '平衡',
+  1.5: '创意',
+  2.0: '随机'
+}
 
 // 模型相关
 const modelsLoading = ref(false)
@@ -204,25 +241,25 @@ const fetchAIModels = async () => {
     // 转换为选项格式
     chatModelOptions.value = chatModels.map((m: any) => ({
       label: m.name,
-      value: m.name
+      value: m.ai_model_name || m.name
     }))
 
     imageModelOptions.value = imageModels.map((m: any) => ({
       label: m.name,
-      value: m.name
+      value: m.ai_model_name || m.name
     }))
 
     // 设置默认模型 - 优先选择标记为默认的模型，否则选择第一个
     const defaultChatModel = models.find((m: any) => m.is_default && m.is_enabled && m.supports_chat)
     if (defaultChatModel) {
-      selectedChatModel.value = defaultChatModel.name
+      selectedChatModel.value = defaultChatModel.ai_model_name || defaultChatModel.name
     } else if (chatModelOptions.value.length > 0) {
       selectedChatModel.value = chatModelOptions.value[0].value
     }
 
     const defaultImageModel = models.find((m: any) => m.is_default && m.is_enabled && m.supports_image_generation)
     if (defaultImageModel) {
-      selectedImageModel.value = defaultImageModel.name
+      selectedImageModel.value = defaultImageModel.ai_model_name || defaultImageModel.name
     } else if (imageModelOptions.value.length > 0) {
       selectedImageModel.value = imageModelOptions.value[0].value
     }
@@ -293,21 +330,9 @@ const handleOptimizeTimeout = () => {
   emit('update:visible', true)
 }
 
-// 处理取消优化
-const handleCancelOptimize = () => {
-  optimizing.value = false
-  loading.value = false
-
-  // 清理超时定时器
-  if (optimizeTimeout.value) {
-    clearTimeout(optimizeTimeout.value)
-    optimizeTimeout.value = null
-  }
-
-  message.info('已取消优化')
-
-  // 重新打开对话框
-  emit('update:visible', true)
+// Temperature工具提示格式化
+const formatTemperatureTooltip = (value: number) => {
+  return `Temperature: ${value.toFixed(1)}`
 }
 
 // 处理优化请求
@@ -350,7 +375,8 @@ const handleOptimize = async () => {
       prompt.value.trim(),
       {
         model: selectedChatModel.value
-      }
+      },
+      temperature.value
     )
 
     if (response.status === 'success' && response.data) {
@@ -503,6 +529,57 @@ onMounted(() => {
         &:disabled {
           opacity: 0.5;
           cursor: not-allowed;
+        }
+      }
+    }
+  }
+
+  /* Temperature控件样式 */
+  .temperature-controls {
+    border-top: 1px solid #e5e7eb;
+    padding: 1rem;
+    background-color: #f9fafb;
+
+    .temperature-group {
+      .temperature-label {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.875rem;
+        color: #374151;
+        margin-bottom: 0.75rem;
+        font-weight: 500;
+
+        .info-icon {
+          color: #9ca3af;
+          cursor: help;
+          font-size: 0.75rem;
+
+          &:hover {
+            color: #6b7280;
+          }
+        }
+      }
+
+      .temperature-slider-container {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+
+        .temperature-slider {
+          flex: 1;
+        }
+
+        .temperature-value {
+          min-width: 2.5rem;
+          text-align: center;
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: #3b82f6;
+          background-color: #eff6ff;
+          padding: 0.25rem 0.5rem;
+          border-radius: 0.375rem;
+          border: 1px solid #dbeafe;
         }
       }
     }
