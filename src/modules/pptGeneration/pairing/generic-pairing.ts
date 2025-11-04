@@ -61,8 +61,8 @@ export function pairGenericLayout(
       }
 
       if (titleEl && bestMatch) {
-        pairedElements.push({ 
-          title: titleEl, 
+        pairedElements.push({
+          title: titleEl,
           text: bestMatch,
           dataItem: itemsWithTitle[i]
         })
@@ -72,7 +72,36 @@ export function pairGenericLayout(
     }
   }
 
-  // 对无标题的数据项分配剩余的正文元素
+  // 特殊处理：当所有数据项都没有标题时，直接进行文本元素配对
+  if (itemsWithTitle.length === 0 && itemsWithoutTitle.length > 0) {
+    console.log('[Generic Pairing] 进入特殊处理分支：所有数据项都没有标题')
+    const sortedTextElements = textElements
+      .filter((el): el is PPTTextElement | PPTShapeElement => el.type === 'text' || el.type === 'shape')
+      .sort((a, b) => {
+        const aIndex = a.left + a.top * 2
+        const bIndex = b.left + b.top * 2
+        return aIndex - bIndex
+      })
+
+    console.log('[Generic Pairing] 排序后的文本元素:', sortedTextElements.map(el => ({ id: el.id, left: el.left, top: el.top })))
+
+    for (let i = 0; i < itemsWithoutTitle.length; i++) {
+      const textEl = sortedTextElements[i]
+      if (textEl) {
+        pairedElements.push({
+          title: null,
+          text: textEl,
+          dataItem: itemsWithoutTitle[i]
+        })
+        console.log('[Generic Pairing] 配对成功:', {
+          textElementId: textEl.id,
+          dataItem: itemsWithoutTitle[i]
+        })
+      }
+    }
+    console.log('[Generic Pairing] 最终配对结果:', pairedElements)
+    return pairedElements
+  }
   const remainingTextElements = textElements
     .filter((textEl): textEl is PPTTextElement | PPTShapeElement =>
       textEl.type === 'text' || textEl.type === 'shape'

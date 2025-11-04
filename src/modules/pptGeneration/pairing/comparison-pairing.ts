@@ -26,6 +26,15 @@ export function pairComparisonLayout(
 ): PairedElement[] {
   const pairedElements: PairedElement[] = []
 
+  console.log('[Comparison Pairing] 开始对比布局配对', {
+    leftTitles: layoutAnalysis.leftTitles.length,
+    leftTexts: layoutAnalysis.leftTexts.length,
+    rightTitles: layoutAnalysis.rightTitles.length,
+    rightTexts: layoutAnalysis.rightTexts.length,
+    itemsWithTitle: itemsWithTitle.length,
+    itemsWithoutTitle: itemsWithoutTitle.length
+  })
+
   let withoutTitleIndex = 0
   let withTitleIndex = 0
 
@@ -49,6 +58,15 @@ export function pairComparisonLayout(
     })
     withTitleIndex++
   }
+  // 左侧无标题配对（如果左侧有文本元素但没有有标题数据项）
+  else if (layoutAnalysis.leftTexts.length > 0 && itemsWithoutTitle.length > withoutTitleIndex) {
+    pairedElements.push({
+      title: null,
+      text: layoutAnalysis.leftTexts[0],
+      dataItem: itemsWithoutTitle[withoutTitleIndex]
+    })
+    withoutTitleIndex++
+  }
 
   // 右侧配对
   if (layoutAnalysis.rightTitles.length > 0 && itemsWithTitle.length > withTitleIndex) {
@@ -59,17 +77,27 @@ export function pairComparisonLayout(
     })
     withTitleIndex++
   }
+  // 右侧无标题配对（如果右侧有文本元素但没有有标题数据项）
+  else if (layoutAnalysis.rightTexts.length > 0 && itemsWithoutTitle.length > withoutTitleIndex) {
+    pairedElements.push({
+      title: null,
+      text: layoutAnalysis.rightTexts[0],
+      dataItem: itemsWithoutTitle[withoutTitleIndex]
+    })
+    withoutTitleIndex++
+  }
 
   // 3. 处理底部无标题内容
   if (layoutAnalysis.bottomTexts.length > 0 && itemsWithoutTitle.length > withoutTitleIndex) {
-    pairedElements.push({ 
-      title: null, 
+    pairedElements.push({
+      title: null,
       text: layoutAnalysis.bottomTexts[0],
       dataItem: itemsWithoutTitle[withoutTitleIndex]
     })
     withoutTitleIndex++
   }
 
+  console.log('[Comparison Pairing] 对比布局配对结果:', pairedElements)
   return pairedElements
 }
 

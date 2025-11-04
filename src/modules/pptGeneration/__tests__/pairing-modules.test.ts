@@ -237,5 +237,68 @@ describe('Pairing Modules - 配对模块', () => {
       expect(result[0].text).toBeDefined()
     })
   })
-})
 
+  describe('实际场景测试 - 基于DdUosjpCnW模板', () => {
+    it('应该正确处理对比布局中所有数据项都没有标题的情况', () => {
+      // 基于实际模板 DdUosjpCnW 的布局分析结果
+      const layoutAnalysis: LayoutAnalysisResult = {
+        layoutType: 'comparison',
+        leftTitles: [createTextElement('left_title', 100, 100, 200)],
+        rightTitles: [createTextElement('right_title', 400, 100, 200)],
+        leftTexts: [createTextElement('52r6QyTCHX', 100, 170, 200, 'item')], // 实际模板中的文本元素ID
+        rightTexts: [createTextElement('c1MNLb3HIm', 400, 170, 200, 'item')], // 实际模板中的文本元素ID
+        topTexts: [],
+        bottomTexts: [],
+      }
+
+      // 基于实际后端返回的数据结构
+      const itemsWithTitle = []
+      const itemsWithoutTitle = [
+        { title: '', text: '通过生活情境引入有理数比较的挑战，激发学习兴趣' },
+        { title: '', text: '通过分类讨论和数轴观察，构建有理数比较的基本框架' },
+      ]
+
+      const result = pairComparisonLayout(layoutAnalysis, itemsWithTitle, itemsWithoutTitle)
+
+      expect(result).toHaveLength(2)
+      // 左侧文本元素应该与第一个无标题数据项配对
+      expect(result[0].title).toBeNull()
+      expect(result[0].text.id).toBe('52r6QyTCHX')
+      expect(result[0].dataItem.text).toBe('通过生活情境引入有理数比较的挑战，激发学习兴趣')
+      // 右侧文本元素应该与第二个无标题数据项配对
+      expect(result[1].title).toBeNull()
+      expect(result[1].text.id).toBe('c1MNLb3HIm')
+      expect(result[1].dataItem.text).toBe('通过分类讨论和数轴观察，构建有理数比较的基本框架')
+    })
+
+    it('应该正确处理通用布局中所有数据项都没有标题的情况', () => {
+      // 模拟通用布局场景
+      const titleElements = [
+        createTextElement('title1', 100, 100, 200, 'itemTitle'),
+        createTextElement('title2', 100, 250, 200, 'itemTitle'),
+      ]
+      const textElements = [
+        createTextElement('text1', 100, 170, 200, 'item'),
+        createTextElement('text2', 100, 320, 200, 'item'),
+      ]
+
+      // 基于实际后端返回的数据结构 - 所有数据项都没有标题
+      const itemsWithTitle = []
+      const itemsWithoutTitle = [
+        { title: '', text: '通过生活情境引入有理数比较的挑战，激发学习兴趣' },
+        { title: '', text: '通过分类讨论和数轴观察，构建有理数比较的基本框架' },
+      ]
+
+      const result = pairGenericLayout(titleElements, textElements, itemsWithTitle, itemsWithoutTitle)
+
+      expect(result).toHaveLength(2)
+      // 所有配对都应该没有标题元素
+      expect(result[0].title).toBeNull()
+      expect(result[0].text.id).toBe('text1')
+      expect(result[0].dataItem.text).toBe('通过生活情境引入有理数比较的挑战，激发学习兴趣')
+      expect(result[1].title).toBeNull()
+      expect(result[1].text.id).toBe('text2')
+      expect(result[1].dataItem.text).toBe('通过分类讨论和数轴观察，构建有理数比较的基本框架')
+    })
+  })
+})
