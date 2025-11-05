@@ -182,13 +182,13 @@ const fetchAIModels = async () => {
       .filter(m => m.is_enabled && m.supports_chat)
       .map(m => ({
         label: m.name,
-        value: m.name
+        value: m.ai_model_name || m.name
       }))
 
     // 设置默认模型 - 优先选择标记为默认的对话模型，否则选择第一个对话模型
     const defaultModel = models.find((m: any) => m.is_default && m.is_enabled && m.supports_chat)
     if (defaultModel) {
-      model.value = defaultModel.name
+      model.value = defaultModel.ai_model_name || defaultModel.name
     }
     else if (modelOptions.value.length > 0) {
       model.value = modelOptions.value[0].value
@@ -251,7 +251,7 @@ const createOutline = async () => {
     input_content: keyword.value,
     language: language.value,
     slide_count: slideCount.value,
-    model_settings: { model: model.value }
+    ai_model_config: { model: model.value }
   })
 
   loading.value = false

@@ -217,7 +217,7 @@ export default defineComponent({
       id: '',
       name: '',
       type: 'text',
-      provider: 'openai',
+      provider: 'opencompatible',
       baseUrl: '',
       apiKey: '',
       modelName: '',
@@ -230,7 +230,6 @@ export default defineComponent({
 
     // Provider选项配置
     const providerOptions = ref([
-      { label: 'OpenAI', value: 'openai' },
       { label: 'OpenAI兼容模式', value: 'opencompatible' },
       { label: 'Gemini', value: 'gemini' }
     ])
@@ -311,7 +310,7 @@ export default defineComponent({
             id: modelDetail.id,
             name: modelDetail.name,
             type: modelDetail.supports_image_generation ? 'image' : 'text', // Use supports_image_generation field
-            provider: modelDetail.provider || 'openai',
+            provider: modelDetail.provider || 'opencompatible',
             baseUrl: modelDetail.base_url || '',
             apiKey: modelDetail.api_key || '',
             modelName: modelDetail.ai_model_name || '',
@@ -332,7 +331,7 @@ export default defineComponent({
             id: row.id,
             name: row.name,
             type: modelType,
-            provider: row.provider || 'openai',
+            provider: row.provider || 'opencompatible',
             baseUrl: row.baseUrl,
             apiKey: row.apiKey || '', // 使用空字符串作为默认值
             modelName: row.modelName,
@@ -350,7 +349,7 @@ export default defineComponent({
           id: '',
           name: row.name,
           type: row.type,
-          provider: row.provider || 'openai',
+          provider: row.provider || 'opencompatible',
           baseUrl: row.baseUrl,
           apiKey: row.apiKey || '',
           modelName: row.modelName,
@@ -367,7 +366,7 @@ export default defineComponent({
           id: '',
           name: '',
           type: 'text',
-          provider: 'openai',
+          provider: 'opencompatible',
           baseUrl: '',
           apiKey: '',
           modelName: '',
@@ -429,7 +428,7 @@ export default defineComponent({
           id: '',
           name: `${modelDetail.name} - 副本`,
           type: modelDetail.supports_image_generation ? 'image' : 'text',
-          provider: modelDetail.provider || 'openai',
+          provider: modelDetail.provider || 'opencompatible',
           baseUrl: modelDetail.base_url || '',
           apiKey: modelDetail.api_key || '',
           modelName: modelDetail.ai_model_name || '',
@@ -475,8 +474,8 @@ export default defineComponent({
         }
       }
       else if (value === 'text') {
-        // 文本模型默认选择OpenAI
-        modelForm.value.provider = 'openai'
+        // 文本模型默认选择OpenAI兼容模式
+        modelForm.value.provider = 'opencompatible'
         // 设置默认的Base URL
         if (!modelForm.value.baseUrl) {
           modelForm.value.baseUrl = 'https://api.openai.com'
@@ -487,7 +486,6 @@ export default defineComponent({
     // Provider相关的辅助函数
     const getProviderLabel = (provider: string) => {
       const providerMap: Record<string, string> = {
-        'openai': 'OpenAI',
         'opencompatible': 'OpenAI兼容',
         'gemini': 'Gemini'
       }
@@ -496,7 +494,6 @@ export default defineComponent({
 
     const getProviderTagType = (provider: string) => {
       const typeMap: Record<string, string> = {
-        'openai': 'primary',
         'opencompatible': 'warning',
         'gemini': 'success'
       }

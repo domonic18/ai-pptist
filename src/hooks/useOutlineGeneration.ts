@@ -8,7 +8,7 @@ export interface OutlineGenerationOptions {
   input_content: string
   language?: string
   slide_count?: number
-  model_settings?: { model: string }
+  ai_model_config?: { model: string }
 }
 
 export interface SSEEvent {
