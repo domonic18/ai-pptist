@@ -313,6 +313,23 @@ const setPrompt = (text: string) => {
   inputRef.value?.focus()
 }
 
+// 取消优化
+const handleCancelOptimize = () => {
+  optimizing.value = false
+  loading.value = false
+
+  // 清理超时定时器
+  if (optimizeTimeout.value) {
+    clearTimeout(optimizeTimeout.value)
+    optimizeTimeout.value = null
+  }
+
+  message.info('已取消优化')
+
+  // 重新打开对话框
+  emit('update:visible', true)
+}
+
 // 处理优化超时
 const handleOptimizeTimeout = () => {
   optimizing.value = false
