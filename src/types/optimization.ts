@@ -23,6 +23,10 @@ export interface OptimizationRequest {
     [key: string]: any;
   };
   temperature?: number; // 温度参数（0.0-2.0），控制生成多样性
+
+  // 新增智能分析参数
+  content_analysis?: string; // 内容智能分析结果，用于指导布局选择和优化策略
+  layout_type_hint?: string; // 布局类型智能提示，基于内容语义分析的推荐布局类型
 }
 
 /**
