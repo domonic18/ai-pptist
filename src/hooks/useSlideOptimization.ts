@@ -3,6 +3,8 @@
  * 处理幻灯片的AI优化逻辑，包括API调用、数据处理和错误处理
  */
 
+/* eslint-disable no-console */
+
 import { ref, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSlidesStore } from '@/store'
@@ -162,12 +164,12 @@ export default function useSlideOptimization() {
           // 打印详细调试信息
           console.log('=== 优化处理调试信息 ===')
           console.log('原始元素数量:', currentSlide.value.elements.length)
-          console.log('优化后元素数量:', response.data.elements.length)
+          console.log('优化后元素数量:', response.data?.elements?.length || 0)
           console.log('处理后元素数量:', processedElements.length)
 
           // 检查ID匹配情况
           const originalIds = new Set(currentSlide.value.elements.map(el => el.id))
-          const optimizedIds = new Set(response.data.elements.map(el => el.id))
+          const optimizedIds = new Set(response.data?.elements?.map(el => el.id) || [])
           const matchedIds = [...originalIds].filter(id => optimizedIds.has(id))
           const newIds = [...optimizedIds].filter(id => !originalIds.has(id))
 
@@ -176,14 +178,17 @@ export default function useSlideOptimization() {
 
           // 检查元素属性变化
           currentSlide.value.elements.forEach((originalEl, index) => {
-            const optimizedEl = response.data.elements.find(opt => opt.id === originalEl.id)
+            const optimizedEl = response.data?.elements?.find(opt => opt.id === originalEl.id)
             if (optimizedEl) {
               console.log(`元素 ${index} (${originalEl.id}) 属性变化:`)
               if (originalEl.left !== optimizedEl.left || originalEl.top !== optimizedEl.top) {
                 console.log(`  - 位置: (${originalEl.left},${originalEl.top}) -> (${optimizedEl.left},${optimizedEl.top})`)
               }
-              if (originalEl.width !== optimizedEl.width || originalEl.height !== optimizedEl.height) {
-                console.log(`  - 尺寸: ${originalEl.width}x${originalEl.height} -> ${optimizedEl.width}x${optimizedEl.height}`)
+              // 只有非线条元素才有width和height属性
+              if (originalEl.type !== 'line' && optimizedEl.type !== 'line') {
+                if (originalEl.width !== optimizedEl.width || originalEl.height !== optimizedEl.height) {
+                  console.log(`  - 尺寸: ${originalEl.width}x${originalEl.height} -> ${optimizedEl.width}x${optimizedEl.height}`)
+                }
               }
               if (originalEl.type === 'text' && originalEl.content !== optimizedEl.content) {
                 console.log(`  - 内容: "${originalEl.content}" -> "${optimizedEl.content}"`)
@@ -194,8 +199,8 @@ export default function useSlideOptimization() {
           // 打印统计信息
           console.log('正在更新幻灯片，元素数量:', {
             原有: currentSlide.value.elements.length,
-            优化后: response.data.elements.length,
-            新增: response.data.elements.length - currentSlide.value.elements.length,
+            优化后: response.data?.elements?.length || 0,
+            新增: (response.data?.elements?.length || 0) - currentSlide.value.elements.length,
             合并后: processedElements.length
           })
 
