@@ -326,8 +326,8 @@ const handleCancelOptimize = () => {
 
   message.info('已取消优化')
 
-  // 重新打开对话框
-  emit('update:visible', true)
+  // 关闭对话框
+  emit('close')
 }
 
 // 处理优化超时
@@ -343,8 +343,8 @@ const handleOptimizeTimeout = () => {
 
   message.error('优化超时，请检查网络连接或稍后重试')
 
-  // 重新打开对话框
-  emit('update:visible', true)
+  // 关闭对话框
+  emit('close')
 }
 
 // Temperature工具提示格式化
@@ -364,8 +364,7 @@ const handleOptimize = async () => {
     return
   }
 
-  // 立即关闭对话框，显示优化中状态
-  emit('update:visible', false)
+  // 保持对话框打开，显示优化中状态
   optimizing.value = true
   loading.value = true
 
@@ -397,52 +396,126 @@ const handleOptimize = async () => {
     )
 
     if (response.status === 'success' && response.data) {
-      // 更新幻灯片元素
-      slidesStore.updateSlide({
-        elements: currentSlide.value.elements.map((originalEl: any) => {
-          const optimizedEl = response.data!.elements.find(
-            (opt: any) => opt.id === originalEl.id
-          )
-          if (optimizedEl) {
-            const updatedElement = { ...originalEl }
+      // 1. 先清除超时定时器
+      if (optimizeTimeout.value) {
+        clearTimeout(optimizeTimeout.value)
+        optimizeTimeout.value = null
+      }
 
-            // 更新基础位置属性
-            updatedElement.left = optimizedEl.left
-            updatedElement.top = optimizedEl.top
+      // 2. 收集原有元素的ID
+      const originalElementIds = new Set(currentSlide.value.elements.map((el: any) => el.id))
+      
+      // 3. 更新原有元素的属性
+      const updatedElements = currentSlide.value.elements.map((originalEl: any) => {
+        const optimizedEl = response.data!.elements.find(
+          (opt: any) => opt.id === originalEl.id
+        )
+        if (optimizedEl) {
+          const updatedElement = { ...originalEl }
 
-            // 更新尺寸和旋转（线条元素没有这些属性）
-            if (originalEl.type !== 'line') {
-              if ('width' in updatedElement && optimizedEl.width !== undefined) {
-                (updatedElement as any).width = optimizedEl.width
-              }
-              if ('height' in updatedElement && optimizedEl.height !== undefined) {
-                (updatedElement as any).height = optimizedEl.height
-              }
-              if ('rotate' in updatedElement && optimizedEl.rotate !== undefined) {
-                (updatedElement as any).rotate = optimizedEl.rotate
-              }
+          // 更新基础位置属性
+          updatedElement.left = optimizedEl.left
+          updatedElement.top = optimizedEl.top
+
+          // 更新尺寸和旋转（线条元素没有这些属性）
+          if (originalEl.type !== 'line') {
+            if ('width' in updatedElement && optimizedEl.width !== undefined) {
+              (updatedElement as any).width = optimizedEl.width
             }
-
-            return updatedElement
+            if ('height' in updatedElement && optimizedEl.height !== undefined) {
+              (updatedElement as any).height = optimizedEl.height
+            }
+            if ('rotate' in updatedElement && optimizedEl.rotate !== undefined) {
+              (updatedElement as any).rotate = optimizedEl.rotate
+            }
           }
-          return originalEl
-        }),
+
+          // 更新其他优化后的属性
+          if (optimizedEl.fill !== undefined) updatedElement.fill = optimizedEl.fill
+          if (optimizedEl.content !== undefined) updatedElement.content = optimizedEl.content
+          if (optimizedEl.defaultColor !== undefined) updatedElement.defaultColor = optimizedEl.defaultColor
+          if (optimizedEl.lineHeight !== undefined) updatedElement.lineHeight = optimizedEl.lineHeight
+
+          return updatedElement
+        }
+        return originalEl
       })
 
+      // 4. 添加后端新生成的装饰元素
+      const newElements = response.data!.elements
+        .filter((opt: any) => !originalElementIds.has(opt.id))
+        .map((newEl: any) => {
+          // 构建完整的PPT元素对象
+          const element: any = {
+            id: newEl.id,
+            type: newEl.type,
+            left: newEl.left,
+            top: newEl.top,
+          }
+
+          // 添加width、height、rotate（除了line类型）
+          if (newEl.type !== 'line') {
+            element.width = newEl.width || 100
+            element.height = newEl.height || 100
+            element.rotate = newEl.rotate || 0
+          }
+
+          // 根据类型添加特定属性
+          switch (newEl.type) {
+            case 'shape':
+              element.fill = newEl.fill || '#5b9bd5'
+              element.outline = newEl.outline || { width: 0, color: '#000000', style: 'solid' }
+              element.text = newEl.text || { content: '' }
+              element.radius = newEl.radius
+              element.shadow = newEl.shadow
+              element.opacity = newEl.opacity
+              element.flipH = newEl.flipH
+              element.flipV = newEl.flipV
+              break
+            
+            case 'text':
+              element.content = newEl.content || ''
+              element.defaultFontName = newEl.defaultFontName || 'Microsoft Yahei'
+              element.defaultColor = newEl.defaultColor || '#333333'
+              element.lineHeight = newEl.lineHeight || 1.5
+              break
+            
+            case 'image':
+              element.src = newEl.src || ''
+              element.fixedRatio = newEl.fixedRatio !== undefined ? newEl.fixedRatio : true
+              break
+            
+            default:
+              // 其他类型元素保持基础属性
+              break
+          }
+
+          return element
+        })
+
+      // 5. 合并更新后的原有元素和新元素
+      slidesStore.updateSlide({
+        elements: [...updatedElements, ...newElements],
+      })
+
+      // 6. 先清除loading状态，让用户看到更新后的内容
+      optimizing.value = false
+      loading.value = false
+
+      // 7. 显示成功提示
       message.success('幻灯片优化完成！')
 
-      // 优化成功后完全关闭对话框，不重新打开
-      emit('close')
+      // 8. 使用setTimeout确保状态更新和DOM渲染完成后再关闭对话框
+      setTimeout(() => {
+        emit('close')
+      }, 300) // 300ms延迟，让用户看到成功状态
     } else {
       throw new Error(response.message || '优化失败')
     }
   } catch (error: any) {
     console.error('优化失败:', error)
     message.error(`优化失败：${error.message}`)
-
-    // 优化失败时重新打开对话框
-    emit('update:visible', true)
-  } finally {
+    
     // 清理状态
     optimizing.value = false
     loading.value = false
@@ -450,6 +523,8 @@ const handleOptimize = async () => {
       clearTimeout(optimizeTimeout.value)
       optimizeTimeout.value = null
     }
+    
+    // 优化失败时，对话框保持打开状态，用户可以重新尝试
   }
 }
 
