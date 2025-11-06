@@ -4,10 +4,12 @@
     title="优化幻灯片提示词"
     width="600px"
     :close-on-click-modal="false"
-    :close-on-press-escape="true"
-    @update:model-value="$emit('update:visible', $event)"
-    @close="handleClose"
+    :close-on-press-escape="false"
+    @update:model-value="handleUpdateVisible"
+    @close="handleDialogCloseEvent"
+    @closed="handleDialogClosedEvent"
     :before-close="handleBeforeClose"
+    append-to-body
   >
     <!-- 优化中状态 -->
     <div v-if="optimizing" class="optimizing-overlay">
@@ -28,150 +30,154 @@
 
     <!-- 正常状态 -->
     <div v-else>
-    <!-- 提示词编辑区域 -->
-    <div class="prompt-section">
-      <div class="input-container">
-        <textarea
-          ref="inputRef"
-          v-model="prompt"
-          placeholder="请输入优化幻灯片的提示词..."
-          @keydown.enter.ctrl="handleOptimize"
-          @keydown.enter.meta="handleOptimize"
-        ></textarea>
+      <!-- 提示词编辑区域 -->
+      <div class="prompt-section">
+        <div class="input-container">
+          <textarea
+            ref="inputRef"
+            v-model="prompt"
+            placeholder="请输入优化幻灯片的提示词..."
+            @keydown.enter.ctrl="handleOptimize"
+            @keydown.enter.meta="handleOptimize"
+          ></textarea>
 
-        <!-- 模型切换区域 -->
-        <div class="model-controls">
-          <div class="model-group">
-            <div class="model-label">对话模型</div>
-            <el-select
-              v-model="selectedChatModel"
-              class="model-select"
-              size="small"
-              :loading="modelsLoading"
-              placeholder="选择对话模型"
-            >
-              <el-option-group label="对话框模型">
-                <el-option
-                  v-for="model in chatModelOptions"
-                  :key="model.value"
-                  :label="model.label"
-                  :value="model.value"
-                />
-              </el-option-group>
-            </el-select>
+          <!-- 模型切换区域 -->
+          <div class="model-controls">
+            <div class="model-group">
+              <div class="model-label">对话模型</div>
+              <el-select
+                v-model="selectedChatModel"
+                class="model-select"
+                size="small"
+                :loading="modelsLoading"
+                placeholder="选择对话模型"
+              >
+                <el-option-group label="对话框模型">
+                  <el-option
+                    v-for="model in chatModelOptions"
+                    :key="model.value"
+                    :label="model.label"
+                    :value="model.value"
+                  />
+                </el-option-group>
+              </el-select>
+            </div>
+
+            <div class="model-group">
+              <div class="model-label">文生图模型</div>
+              <el-select
+                v-model="selectedImageModel"
+                class="model-select"
+                size="small"
+                :loading="modelsLoading"
+                placeholder="选择文生图模型"
+              >
+                <el-option-group label="文生图模型">
+                  <el-option
+                    v-for="model in imageModelOptions"
+                    :key="model.value"
+                    :label="model.label"
+                    :value="model.value"
+                  />
+                </el-option-group>
+              </el-select>
+            </div>
+
+            <!-- 发送给AI按钮 -->
+            <div class="send-button-container">
+              <button
+                @click="handleOptimize"
+                :disabled="!prompt.trim() || loading"
+                class="send-button"
+                title="发送给AI优化幻灯片"
+              >
+                <el-icon><Promotion /></el-icon>
+              </button>
+            </div>
           </div>
 
-          <div class="model-group">
-            <div class="model-label">文生图模型</div>
-            <el-select
-              v-model="selectedImageModel"
-              class="model-select"
-              size="small"
-              :loading="modelsLoading"
-              placeholder="选择文生图模型"
-            >
-              <el-option-group label="文生图模型">
-                <el-option
-                  v-for="model in imageModelOptions"
-                  :key="model.value"
-                  :label="model.label"
-                  :value="model.value"
+          <!-- Temperature调节区域 -->
+          <div class="temperature-controls">
+            <div class="temperature-group">
+              <div class="temperature-label">
+                <span>生成多样性</span>
+                <el-tooltip
+                  content="控制AI生成内容的多样性。较低值（如0.2）更确定，较高值（如1.0）更随机"
+                  placement="top"
+                >
+                  <el-icon class="info-icon"><InfoFilled /></el-icon>
+                </el-tooltip>
+              </div>
+              <div class="temperature-slider-container">
+                <el-slider
+                  v-model="temperature"
+                  :min="0.0"
+                  :max="2.0"
+                  :step="0.1"
+                  :format-tooltip="formatTemperatureTooltip"
+                  show-stops
+                  :marks="TEMPERATURE_MARKS"
+                  class="temperature-slider"
                 />
-              </el-option-group>
-            </el-select>
+                <div class="temperature-value">{{ temperature.toFixed(1) }}</div>
+              </div>
+            </div>
           </div>
+        </div>
+      </div>
 
-          <!-- 发送给AI按钮 -->
-          <div class="send-button-container">
+      <!-- 快捷提示词区域 -->
+      <div class="quick-prompts">
+        <!-- 文字相关快捷提示词 -->
+        <div class="prompt-category">
+          <div class="category-label">文字优化</div>
+          <div class="prompt-buttons">
             <button
-              @click="handleOptimize"
-              :disabled="!prompt.trim() || loading"
-              class="send-button"
-              title="发送给AI优化幻灯片"
+              v-for="(quickPrompt, index) in TEXT_QUICK_PROMPTS"
+              :key="index"
+              @click="setPrompt(quickPrompt.text)"
+              class="prompt-button"
             >
-              <el-icon><Promotion /></el-icon>
+              <el-icon><component :is="quickPrompt.icon" /></el-icon>
+              <span>{{ quickPrompt.label }}</span>
             </button>
           </div>
         </div>
 
-        <!-- Temperature调节区域 -->
-        <div class="temperature-controls">
-          <div class="temperature-group">
-            <div class="temperature-label">
-              <span>生成多样性</span>
-              <el-tooltip
-                content="控制AI生成内容的多样性。较低值（如0.2）更确定，较高值（如1.0）更随机"
-                placement="top"
-              >
-                <el-icon class="info-icon"><InfoFilled /></el-icon>
-              </el-tooltip>
-            </div>
-            <div class="temperature-slider-container">
-              <el-slider
-                v-model="temperature"
-                :min="0.0"
-                :max="2.0"
-                :step="0.1"
-                :format-tooltip="formatTemperatureTooltip"
-                show-stops
-                :marks="temperatureMarks"
-                class="temperature-slider"
-              />
-              <div class="temperature-value">{{ temperature.toFixed(1) }}</div>
-            </div>
+        <!-- 图片相关快捷提示词 -->
+        <div class="prompt-category">
+          <div class="category-label">图像生成</div>
+          <div class="prompt-buttons">
+            <button
+              v-for="(quickPrompt, index) in IMAGE_QUICK_PROMPTS"
+              :key="index"
+              @click="setPrompt(quickPrompt.text)"
+              class="prompt-button"
+            >
+              <el-icon><component :is="quickPrompt.icon" /></el-icon>
+              <span>{{ quickPrompt.label }}</span>
+            </button>
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- 快捷提示词区域 -->
-    <div class="quick-prompts">
-      <!-- 文字相关快捷提示词 -->
-      <div class="prompt-category">
-        <div class="category-label">文字优化</div>
-        <div class="prompt-buttons">
-          <button
-            v-for="(quickPrompt, index) in textQuickPrompts"
-            :key="index"
-            @click="setPrompt(quickPrompt.text)"
-            class="prompt-button"
-          >
-            <el-icon><component :is="quickPrompt.icon" /></el-icon>
-            <span>{{ quickPrompt.label }}</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- 图片相关快捷提示词 -->
-      <div class="prompt-category">
-        <div class="category-label">图像生成</div>
-        <div class="prompt-buttons">
-          <button
-            v-for="(quickPrompt, index) in imageQuickPrompts"
-            :key="index"
-            @click="setPrompt(quickPrompt.text)"
-            class="prompt-button"
-          >
-            <el-icon><component :is="quickPrompt.icon" /></el-icon>
-            <span>{{ quickPrompt.label }}</span>
-          </button>
-        </div>
-      </div>
       </div>
     </div>
   </el-dialog>
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, useTemplateRef } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useSlidesStore, useMainStore } from '@/store'
-import { optimizeSlideLayout } from '@/services/optimization'
-import apiService from '@/services'
-import useHistorySnapshot from '@/hooks/useHistorySnapshot'
-import message from '@/utils/message'
+import { onMounted, nextTick, toRef } from 'vue'
 import { ElDialog, ElSelect, ElOption, ElOptionGroup, ElIcon, ElButton, ElSlider, ElTooltip } from 'element-plus'
-import { MagicStick, Promotion, View, Edit, Check, Expand, Picture, Loading, InfoFilled } from '@element-plus/icons-vue'
+import { Promotion, Loading, InfoFilled } from '@element-plus/icons-vue'
+import useOptimizeDialog from '@/hooks/useOptimizeDialog'
+import useAIModelSelection from '@/hooks/useAIModelSelection'
+import useSlideOptimization from '@/hooks/useSlideOptimization'
+import { 
+  TEXT_QUICK_PROMPTS, 
+  IMAGE_QUICK_PROMPTS, 
+  TEMPERATURE_MARKS 
+} from '@/configs/optimizePrompts'
+
+// ==================== Props & Emits ====================
 
 const props = defineProps<{
   visible: boolean
@@ -182,353 +188,102 @@ const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
-const slidesStore = useSlidesStore()
-const { currentSlide, viewportSize, viewportRatio } = storeToRefs(slidesStore)
-const { addHistorySnapshot } = useHistorySnapshot()
+// ==================== Hooks ====================
 
-// 状态
-const prompt = ref('')
-const loading = ref(false)
-const optimizing = ref(false)
-const optimizeTimeout = ref<number | null>(null)
-const inputRef = useTemplateRef<HTMLTextAreaElement>('inputRef')
+// 对话框状态管理
+const { optimizing } = useSlideOptimization()
+const {
+  prompt,
+  temperature,
+  inputRef,
+  handleDialogClosed,
+  handleDialogClose,
+  handleBeforeClose,
+  setPrompt,
+  formatTemperatureTooltip,
+} = useOptimizeDialog(toRef(props, 'visible'), optimizing)
 
-// Temperature相关状态
-const temperature = ref(0.7) // 默认值，与后端配置保持一致
-const temperatureMarks = {
-  0.0: '确定',
-  0.7: '平衡',
-  1.5: '创意',
-  2.0: '随机'
+// AI模型选择
+const {
+  modelsLoading,
+  selectedChatModel,
+  selectedImageModel,
+  chatModelOptions,
+  imageModelOptions,
+  fetchAIModels,
+} = useAIModelSelection()
+
+// 幻灯片优化
+const {
+  loading,
+  executeOptimization,
+  cancelOptimize,
+  clearOptimizationState,
+} = useSlideOptimization()
+
+// ==================== Event Handlers ====================
+
+/**
+ * 处理visible属性更新
+ * 这是v-model:visible的关键处理函数
+ */
+const handleUpdateVisible = (value: boolean) => {
+  emit('update:visible', value)
 }
 
-// 模型相关
-const modelsLoading = ref(false)
-const selectedChatModel = ref('')
-const selectedImageModel = ref('')
-const chatModelOptions = ref<Array<{ label: string; value: string }>>([])
-const imageModelOptions = ref<Array<{ label: string; value: string }>>([])
+/**
+ * 处理对话框close事件
+ */
+const handleDialogCloseEvent = () => {
+  handleDialogClose({
+    onClose: () => emit('close')
+  })
+}
 
-// 文字相关快捷提示词列表
-const textQuickPrompts = [
-  { label: '尝试新的布局', text: '重新设计幻灯片布局，使其更具视觉吸引力。文字内容不要修改。', icon: View },
-  { label: '改进写作', text: '优化幻灯片内容的表达方式，使其更清晰易懂', icon: Edit },
-  { label: '修正拼写和语法', text: '检查并修正幻灯片中的拼写和语法错误', icon: Check },
-  { label: '翻译', text: '将幻灯片内容翻译成英文', icon: MagicStick },
-  { label: '使其更直观', text: '使内容表达更直观易懂，便于观众理解', icon: Expand }
-]
+/**
+ * 处理对话框完全关闭后的回调
+ */
+const handleDialogClosedEvent = () => {
+  clearOptimizationState()
+  handleDialogClosed()
+}
 
-// 图片相关快捷提示词列表
-const imageQuickPrompts = [
-  { label: '根据内容生成图片', text: '为幻灯片添加相关图像以增强视觉效果', icon: Picture }
-]
-
-
-// 获取AI模型列表
-const fetchAIModels = async () => {
-  modelsLoading.value = true
-  try {
-    const models = await apiService.getAIModels()
-
-    // 分类模型
-    const chatModels = models.filter((m: any) =>
-      m.is_enabled && m.supports_chat
-    )
-    const imageModels = models.filter((m: any) =>
-      m.is_enabled && m.supports_image_generation
-    )
-
-    // 转换为选项格式
-    chatModelOptions.value = chatModels.map((m: any) => ({
-      label: m.name,
-      value: m.ai_model_name || m.name
-    }))
-
-    imageModelOptions.value = imageModels.map((m: any) => ({
-      label: m.name,
-      value: m.ai_model_name || m.name
-    }))
-
-    // 设置默认模型 - 优先选择标记为默认的模型，否则选择第一个
-    const defaultChatModel = models.find((m: any) => m.is_default && m.is_enabled && m.supports_chat)
-    if (defaultChatModel) {
-      selectedChatModel.value = defaultChatModel.ai_model_name || defaultChatModel.name
-    } else if (chatModelOptions.value.length > 0) {
-      selectedChatModel.value = chatModelOptions.value[0].value
+/**
+ * 取消优化
+ */
+const handleCancelOptimize = async () => {
+  await cancelOptimize({
+    onCancel: async () => {
+      emit('update:visible', false)
+      await nextTick()
+      emit('close')
     }
-
-    const defaultImageModel = models.find((m: any) => m.is_default && m.is_enabled && m.supports_image_generation)
-    if (defaultImageModel) {
-      selectedImageModel.value = defaultImageModel.ai_model_name || defaultImageModel.name
-    } else if (imageModelOptions.value.length > 0) {
-      selectedImageModel.value = imageModelOptions.value[0].value
-    }
-  } catch (error) {
-    console.error('Failed to fetch AI models:', error)
-    message.error('获取AI模型列表失败，使用默认模型')
-
-    // 回退选项
-    chatModelOptions.value = [
-      { label: 'GLM-4.5-Air', value: 'GLM-4.5-Air' },
-      { label: 'GLM-4.5-Flash', value: 'GLM-4.5-Flash' },
-    ]
-    imageModelOptions.value = [
-      { label: 'DALL-E 3', value: 'dall-e-3' },
-      { label: 'Stable Diffusion', value: 'stable-diffusion' },
-    ]
-
-    if (chatModelOptions.value.length > 0) {
-      selectedChatModel.value = chatModelOptions.value[0].value
-    }
-    if (imageModelOptions.value.length > 0) {
-      selectedImageModel.value = imageModelOptions.value[0].value
-    }
-  } finally {
-    modelsLoading.value = false
-  }
+  })
 }
 
-// 处理关闭对话框
-const handleClose = () => {
-  emit('close')
-}
-
-// 处理对话框关闭前
-const handleBeforeClose = (done: () => void) => {
-  if (optimizing.value) {
-    // 优化中不允许关闭
-    message.warning('优化进行中，请等待完成或取消优化')
-    return
-  }
-  done()
-}
-
-// 设置提示词
-const setPrompt = (text: string) => {
-  if (prompt.value) {
-    prompt.value += '\n' + text
-  } else {
-    prompt.value = text
-  }
-  inputRef.value?.focus()
-}
-
-// 取消优化
-const handleCancelOptimize = () => {
-  optimizing.value = false
-  loading.value = false
-
-  // 清理超时定时器
-  if (optimizeTimeout.value) {
-    clearTimeout(optimizeTimeout.value)
-    optimizeTimeout.value = null
-  }
-
-  message.info('已取消优化')
-
-  // 关闭对话框
-  emit('close')
-}
-
-// 处理优化超时
-const handleOptimizeTimeout = () => {
-  optimizing.value = false
-  loading.value = false
-
-  // 清理超时定时器
-  if (optimizeTimeout.value) {
-    clearTimeout(optimizeTimeout.value)
-    optimizeTimeout.value = null
-  }
-
-  message.error('优化超时，请检查网络连接或稍后重试')
-
-  // 关闭对话框
-  emit('close')
-}
-
-// Temperature工具提示格式化
-const formatTemperatureTooltip = (value: number) => {
-  return `Temperature: ${value.toFixed(1)}`
-}
-
-// 处理优化请求
+/**
+ * 处理优化请求
+ */
 const handleOptimize = async () => {
-  if (!prompt.value.trim()) {
-    message.warning('请输入优化需求')
-    return
-  }
-
-  if (!currentSlide.value || currentSlide.value.elements.length === 0) {
-    message.warning('当前幻灯片没有可优化的元素')
-    return
-  }
-
-  // 保持对话框打开，显示优化中状态
-  optimizing.value = true
-  loading.value = true
-
-  // 设置超时处理（120秒超时）
-  optimizeTimeout.value = setTimeout(() => {
-    if (optimizing.value) {
-      handleOptimizeTimeout()
-    }
-  }, 120000) as unknown as number
-
-  try {
-    // 添加历史快照
-    addHistorySnapshot()
-
-    // 调用优化服务
-    const response = await optimizeSlideLayout(
-      currentSlide.value.id,
-      currentSlide.value.elements,
-      {
-        width: viewportSize.value,
-        height: viewportSize.value * viewportRatio.value,
-      },
-      undefined,
-      prompt.value.trim(),
-      {
-        model: selectedChatModel.value
-      },
-      temperature.value
-    )
-
-    if (response.status === 'success' && response.data) {
-      // 1. 先清除超时定时器
-      if (optimizeTimeout.value) {
-        clearTimeout(optimizeTimeout.value)
-        optimizeTimeout.value = null
-      }
-
-      // 2. 收集原有元素的ID
-      const originalElementIds = new Set(currentSlide.value.elements.map((el: any) => el.id))
-      
-      // 3. 更新原有元素的属性
-      const updatedElements = currentSlide.value.elements.map((originalEl: any) => {
-        const optimizedEl = response.data!.elements.find(
-          (opt: any) => opt.id === originalEl.id
-        )
-        if (optimizedEl) {
-          const updatedElement = { ...originalEl }
-
-          // 更新基础位置属性
-          updatedElement.left = optimizedEl.left
-          updatedElement.top = optimizedEl.top
-
-          // 更新尺寸和旋转（线条元素没有这些属性）
-          if (originalEl.type !== 'line') {
-            if ('width' in updatedElement && optimizedEl.width !== undefined) {
-              (updatedElement as any).width = optimizedEl.width
-            }
-            if ('height' in updatedElement && optimizedEl.height !== undefined) {
-              (updatedElement as any).height = optimizedEl.height
-            }
-            if ('rotate' in updatedElement && optimizedEl.rotate !== undefined) {
-              (updatedElement as any).rotate = optimizedEl.rotate
-            }
-          }
-
-          // 更新其他优化后的属性
-          if (optimizedEl.fill !== undefined) updatedElement.fill = optimizedEl.fill
-          if (optimizedEl.content !== undefined) updatedElement.content = optimizedEl.content
-          if (optimizedEl.defaultColor !== undefined) updatedElement.defaultColor = optimizedEl.defaultColor
-          if (optimizedEl.lineHeight !== undefined) updatedElement.lineHeight = optimizedEl.lineHeight
-
-          return updatedElement
-        }
-        return originalEl
-      })
-
-      // 4. 添加后端新生成的装饰元素
-      const newElements = response.data!.elements
-        .filter((opt: any) => !originalElementIds.has(opt.id))
-        .map((newEl: any) => {
-          // 构建完整的PPT元素对象
-          const element: any = {
-            id: newEl.id,
-            type: newEl.type,
-            left: newEl.left,
-            top: newEl.top,
-          }
-
-          // 添加width、height、rotate（除了line类型）
-          if (newEl.type !== 'line') {
-            element.width = newEl.width || 100
-            element.height = newEl.height || 100
-            element.rotate = newEl.rotate || 0
-          }
-
-          // 根据类型添加特定属性
-          switch (newEl.type) {
-            case 'shape':
-              element.fill = newEl.fill || '#5b9bd5'
-              element.outline = newEl.outline || { width: 0, color: '#000000', style: 'solid' }
-              element.text = newEl.text || { content: '' }
-              element.radius = newEl.radius
-              element.shadow = newEl.shadow
-              element.opacity = newEl.opacity
-              element.flipH = newEl.flipH
-              element.flipV = newEl.flipV
-              break
-            
-            case 'text':
-              element.content = newEl.content || ''
-              element.defaultFontName = newEl.defaultFontName || 'Microsoft Yahei'
-              element.defaultColor = newEl.defaultColor || '#333333'
-              element.lineHeight = newEl.lineHeight || 1.5
-              break
-            
-            case 'image':
-              element.src = newEl.src || ''
-              element.fixedRatio = newEl.fixedRatio !== undefined ? newEl.fixedRatio : true
-              break
-            
-            default:
-              // 其他类型元素保持基础属性
-              break
-          }
-
-          return element
-        })
-
-      // 5. 合并更新后的原有元素和新元素
-      slidesStore.updateSlide({
-        elements: [...updatedElements, ...newElements],
-      })
-
-      // 6. 先清除loading状态，让用户看到更新后的内容
-      optimizing.value = false
-      loading.value = false
-
-      // 7. 显示成功提示
-      message.success('幻灯片优化完成！')
-
-      // 8. 使用setTimeout确保状态更新和DOM渲染完成后再关闭对话框
-      setTimeout(() => {
+  await executeOptimization(
+    {
+      prompt: prompt.value,
+      chatModel: selectedChatModel.value,
+      temperature: temperature.value,
+    },
+    {
+      onSuccess: async () => {
+        emit('update:visible', false)
+        await nextTick()
         emit('close')
-      }, 300) // 300ms延迟，让用户看到成功状态
-    } else {
-      throw new Error(response.message || '优化失败')
+      },
+      // 失败时保持对话框打开，让用户可以修改参数重试
     }
-  } catch (error: any) {
-    console.error('优化失败:', error)
-    message.error(`优化失败：${error.message}`)
-    
-    // 清理状态
-    optimizing.value = false
-    loading.value = false
-    if (optimizeTimeout.value) {
-      clearTimeout(optimizeTimeout.value)
-      optimizeTimeout.value = null
-    }
-    
-    // 优化失败时，对话框保持打开状态，用户可以重新尝试
-  }
+  )
 }
 
-// 组件挂载时获取模型列表
+// ==================== Lifecycle ====================
+
 onMounted(() => {
   fetchAIModels()
 })
@@ -550,7 +305,7 @@ onMounted(() => {
     width: 100%;
     height: 160px;
     padding: 1rem;
-    border: none; /* 去掉独立边框 */
+    border: none;
     outline: none;
     resize: none;
     font-family: inherit;
@@ -569,7 +324,6 @@ onMounted(() => {
 
   .model-controls {
     display: flex;
-    // border-top: 1px solid #bfdbfe; /* 只保留顶部边框作为分割 */
     overflow: hidden;
     box-sizing: border-box;
 
@@ -591,13 +345,13 @@ onMounted(() => {
     }
 
     .model-group + .model-group {
-      border-left: none; /* 去掉组之间的竖线 */
+      border-left: none;
     }
 
     .send-button-container {
       display: flex;
       align-items: center;
-      border-left: none; /* 去掉按钮容器的左边框 */
+      border-left: none;
       padding: 0 0.5rem;
 
       .send-button {
@@ -626,7 +380,6 @@ onMounted(() => {
     }
   }
 
-  /* Temperature控件样式 */
   .temperature-controls {
     border-top: 1px solid #e5e7eb;
     padding: 1rem;
@@ -685,7 +438,7 @@ onMounted(() => {
     margin-bottom: 1rem;
 
     .category-label {
-      font-size: 0.875rem; /* 增大分组文字大小 */
+      font-size: 0.875rem;
       color: #6b7280;
       margin-bottom: 0.5rem;
       font-weight: 500;
@@ -704,7 +457,7 @@ onMounted(() => {
         background: none;
         border: none;
         cursor: pointer;
-        font-size: 0.75rem; /* 减小快捷文字大小 */
+        font-size: 0.75rem;
         white-space: nowrap;
         transition: color 0.2s ease;
         border-radius: 6px;
