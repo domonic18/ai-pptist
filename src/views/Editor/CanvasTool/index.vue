@@ -125,17 +125,11 @@
       <ImageManager @insert="handleImageInsert" />
     </Modal>
 
-    <Modal
+    <!-- 直接使用OptimizeSlideDialog，移除外层Modal嵌套 -->
+    <OptimizeSlideDialog
       v-model:visible="optimizeSlideDialogVisible"
-      :width="600"
-      :contentStyle="{ maxHeight: '80vh', overflow: 'auto' }"
       @close="optimizeSlideDialogVisible = false"
-    >
-      <OptimizeSlideDialog
-        :visible="optimizeSlideDialogVisible"
-        @close="optimizeSlideDialogVisible = false"
-      />
-    </Modal>
+    />
   </div>
 </template>
 
