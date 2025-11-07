@@ -22,17 +22,30 @@
         <ImageOutline :elementInfo="elementInfo" />
 
         <div class="image-content" :style="{ clipPath: clipShape.style }">
-          <img 
-            :src="elementInfo.src" 
-            :draggable="false" 
+          <SmartImage
+            :src="elementInfo.src"
+            alt=""
+            size="custom"
+            :width="elementInfo.width"
+            :height="elementInfo.height"
             :style="{
+              position: 'absolute',
               top: imgPosition.top,
               left: imgPosition.left,
               width: imgPosition.width,
               height: imgPosition.height,
               filter: filter,
-            }" 
-            alt=""
+            }"
+            :options="{
+              useProxy: true,
+              proxyMode: ProxyMode.REDIRECT,
+              maxRetries: 3
+            }"
+            :show-indicator="false"
+            :show-actions="false"
+            :preview="false"
+            @load="handleLoad"
+            @error="handleError"
           />
           <div class="color-mask"
             v-if="elementInfo.colorMask"
@@ -53,8 +66,25 @@ import useElementShadow from '@/views/components/element/hooks/useElementShadow'
 import useElementFlip from '@/views/components/element/hooks/useElementFlip'
 import useClipImage from './useClipImage'
 import useFilter from './useFilter'
+import { ProxyMode } from '@/composables/useSmartImage'
 
 import ImageOutline from './ImageOutline/index.vue'
+import SmartImage from '@/components/SmartImage.vue'
+
+// 事件处理
+const emit = defineEmits<{
+  load: [event: Event]
+  error: [error: any]
+}>()
+
+function handleLoad(event: Event) {
+  emit('load', event)
+}
+
+function handleError(error: any) {
+  console.error('BaseImageElement error:', error)
+  emit('error', error)
+}
 
 const props = defineProps<{
   elementInfo: PPTImageElement

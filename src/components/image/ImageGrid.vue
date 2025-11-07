@@ -81,10 +81,16 @@
           </div>
 
           <!-- 图片缩略图 -->
-          <img
+          <SmartImage
             :src="image.url"
             :alt="image.filename || image.original_filename"
+            size="custom"
+            :width="'100%'"
+            :height="'100%'"
             class="image-thumbnail"
+            :show-indicator="false"
+            :show-actions="false"
+            :preview="false"
             @load="handleImageLoad"
             @error="handleImageError"
           />
@@ -192,6 +198,7 @@ import { ref, onMounted, computed } from 'vue'
 import { Upload, Delete, ZoomIn, Picture, Plus, Collection, Check } from '@element-plus/icons-vue'
 import { ElTooltip } from 'element-plus'
 import BatchTagModal from './BatchTagModal.vue'
+import SmartImage from '@/components/SmartImage.vue'
 import { getTags } from '@/services/image'
 
 const props = defineProps<{

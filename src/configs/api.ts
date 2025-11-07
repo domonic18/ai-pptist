@@ -22,6 +22,24 @@ export const API_CONFIG = {
     SEARCH: '/api/v1/images/search',
   },
 
+  // 图片代理相关API
+  IMAGE_PROXY: {
+    // 代理访问图片
+    PROXY: (imageKey: string) => `/api/v1/images/${imageKey}/proxy`,
+    // 获取图片状态
+    STATUS: (imageKey: string) => `/api/v1/images/${imageKey}/status`,
+    // 刷新图片URL
+    REFRESH: (imageKey: string) => `/api/v1/images/${imageKey}/refresh`,
+    // 批量获取URL
+    BATCH_URLS: '/api/v1/images/batch/urls',
+    // 获取性能统计
+    STATS: '/api/v1/images/stats',
+    // 清理过期缓存
+    CLEANUP: '/api/v1/images/cleanup',
+    // 预加载URL
+    PRELOAD: '/api/v1/images/preload',
+  },
+
   // 图片上传相关API
   IMAGE_UPLOAD: {
     // 上传图片
