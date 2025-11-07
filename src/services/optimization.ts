@@ -157,16 +157,24 @@ export async function optimizeSlideLayout(
   layoutTypeHint?: string
 ): Promise<OptimizationResponse> {
   try {
+    // 过滤掉锁定的元素，不进行布局优化
+    const unlockedElements = elements.filter(element => !element.lock)
+    const lockedCount = elements.length - unlockedElements.length
+
+    if (lockedCount > 0) {
+      console.log(`🔒 已过滤掉 ${lockedCount} 个锁定元素，只对 ${unlockedElements.length} 个未锁定元素进行优化`)
+    }
+
     // 检查是否启用Mock
     const mockConfig = getMockConfig()
 
     if (mockConfig.enableOptimizationMock) {
-      return await optimizeWithMock(slideId, elements, canvasSize, userPrompt)
+      return await optimizeWithMock(slideId, unlockedElements, canvasSize, userPrompt)
     }
 
     return await optimizeWithAPI(
       slideId,
-      elements,
+      unlockedElements,
       canvasSize,
       options,
       userPrompt,
