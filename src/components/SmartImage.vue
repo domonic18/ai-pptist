@@ -355,9 +355,19 @@ async function load() {
         // 支持的数据URI，直接使用
         currentUrl.value = props.src
       } else {
-        // 如果是cos_key（images/.../xxx.jpg），使用代理
-        const proxyUrl = `${API_CONFIG.IMAGE_PROXY.PROXY(props.src)}?mode=redirect`
-        currentUrl.value = proxyUrl
+        // 判断是否为完整的URL（包含协议如 http:// 或 https://）
+        // 或者已经是代理URL（包含 /api/v1/img-access/）
+        const isFullUrl = /^https?:\/\//i.test(props.src)
+        const isProxyUrl = props.src.includes('/api/v1/img-access/')
+
+        if (isFullUrl || isProxyUrl) {
+          // 已经是完整URL或代理URL，直接使用
+          currentUrl.value = props.src
+        } else {
+          // 如果是cos_key（images/.../xxx.jpg），使用代理
+          const proxyUrl = `${API_CONFIG.IMAGE_PROXY.PROXY(props.src)}?mode=redirect`
+          currentUrl.value = proxyUrl
+        }
       }
     } else {
       console.warn('SmartImage: imageKey or src is required')

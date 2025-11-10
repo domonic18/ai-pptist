@@ -3,7 +3,7 @@ import { storeToRefs } from 'pinia'
 import { useMainStore, useSlidesStore } from '@/store'
 import usePasteTextClipboardData from './usePasteTextClipboardData'
 import useCreateElement from './useCreateElement'
-import { uploadImage, getImageAccessUrl, type ImageItem } from '@/services/image'
+import { uploadImage, type ImageItem } from '@/services/image'
 import useUploadStatus from './useUploadStatus'
 import { nanoid } from 'nanoid'
 import message from '@/utils/message'
@@ -22,7 +22,7 @@ export default () => {
   } = useUploadStatus()
 
   // 粘贴图片缓存，用于滤重处理
-  const pasteImageCache = ref(new Map<string, { success: boolean; image_url: string; image_id: string; cos_key: string; message: string }>())
+  const pasteImageCache = ref(new Map<string, { success: boolean; cos_key: string; image_id: string; image_url: string; message: string }>())
 
   // 生成字符串的SHA-256哈希值
   const generateSHA256 = async (file: File): Promise<string> => {
@@ -54,9 +54,10 @@ export default () => {
             filename: imageFile.name,
             file_size: imageFile.size,
             mime_type: imageFile.type,
-            url: cachedResult.image_url,
+            url: cachedResult.cos_key, // 使用cos_key
             created_at: new Date().toISOString(),
-            description: '粘贴图片'
+            description: '粘贴图片',
+            cos_key: cachedResult.cos_key
           }
           createImageElement(imageItem)
           message.success(`图片已存在，直接使用: ${imageFile.name}`)
@@ -94,52 +95,23 @@ export default () => {
         // 显示上传成功提示
         message.success(`图片上传成功: ${imageFile.name}`)
 
-        // 获取预签名URL
-        try {
-          const presignedUrlResult = await getImageAccessUrl(uploadResult.image_id)
-
-          // 更新现有的占位图元素，使用预签名URL
-          slidesStore.updateElement({
-            id: tempImageId,
-            props: {
-              src: presignedUrlResult.url,
-              imageInfo: {
-                id: tempImageId,
-                filename: imageFile.name,
-                cosKey: uploadResult.cos_key,
-                imageId: uploadResult.image_id,
-                uploadTime: Date.now()
-              }
+        // 使用cos_key作为src，让SmartImage通过代理访问
+        // 不再使用预签名URL，避免过期和跨域问题
+        slidesStore.updateElement({
+          id: tempImageId,
+          props: {
+            src: uploadResult.cos_key, // 直接使用cos_key
+            imageInfo: {
+              id: uploadResult.image_id,
+              filename: imageFile.name,
+              cosKey: uploadResult.cos_key,
+              uploadTime: Date.now()
             }
-          })
-
-          // 将成功结果存入缓存
-          const result = {
-            ...uploadResult,
-            image_url: presignedUrlResult.url
           }
-          pasteImageCache.value.set(imageHash, result)
-        }
-        catch (urlError) {
-          // 如果获取预签名URL失败，回退到原始URL
-          slidesStore.updateElement({
-            id: tempImageId,
-            props: {
-              src: uploadResult.image_url,
-              imageInfo: {
-                id: tempImageId,
-                filename: imageFile.name,
-                cosKey: uploadResult.cos_key,
-                imageId: uploadResult.image_id,
-                uploadTime: Date.now()
-              }
-            }
-          })
+        })
 
-          // 将结果存入缓存
-          const result = uploadResult
-          pasteImageCache.value.set(imageHash, result)
-        }
+        // 将成功结果存入缓存
+        pasteImageCache.value.set(imageHash, uploadResult)
       }
       else {
         markUploadFailed(taskId, uploadResult.message)

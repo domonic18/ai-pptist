@@ -3,7 +3,7 @@ import { storeToRefs } from 'pinia'
 import { useMainStore, useSlidesStore } from '@/store'
 import { parseText2Paragraphs } from '@/utils/textParser'
 import useCreateElement from '@/hooks/useCreateElement'
-import { uploadImage, getImageAccessUrl, type ImageItem } from '@/services/image'
+import { uploadImage, type ImageItem } from '@/services/image'
 import useUploadStatus from '@/hooks/useUploadStatus'
 import { nanoid } from 'nanoid'
 import message from '@/utils/message'
@@ -56,46 +56,26 @@ export default (elementRef: ShallowRef<HTMLElement | null>) => {
           uploadImage(imageFile, (progress) => {
             console.log(`拖拽图片上传进度: ${progress}%`)
             updateUploadProgress(taskId, progress)
-          }).then(async uploadResult => {
+          }).then(uploadResult => {
             if (uploadResult.success) {
               console.log('拖拽图片上传成功:', uploadResult.image_url)
               markUploadSuccess(taskId)
               // 显示上传成功提示
               message.success(`图片上传成功: ${imageFile.name}`)
 
-              // 获取预签名URL
-              try {
-                const presignedUrlResult = await getImageAccessUrl(uploadResult.image_id)
-                console.log('获取预签名URL成功:', presignedUrlResult.url)
-
-                // 更新现有的占位图元素，使用预签名URL
-                slidesStore.updateElement({
-                  id: tempImageId,
-                  props: {
-                    src: presignedUrlResult.url,
-                    imageInfo: {
-                      id: tempImageId,
-                      filename: imageFile.name,
-                      cosKey: uploadResult.cos_key
-                    }
+              // 使用cos_key作为src，让SmartImage通过代理访问
+              // 不再使用预签名URL，避免过期和跨域问题
+              slidesStore.updateElement({
+                id: tempImageId,
+                props: {
+                  src: uploadResult.cos_key, // 直接使用cos_key
+                  imageInfo: {
+                    id: uploadResult.image_id,
+                    filename: imageFile.name,
+                    cosKey: uploadResult.cos_key
                   }
-                })
-              } 
-              catch (urlError) {
-                console.error('获取预签名URL失败:', urlError)
-                // 如果获取预签名URL失败，回退到原始URL
-                slidesStore.updateElement({
-                  id: tempImageId,
-                  props: {
-                    src: uploadResult.image_url,
-                    imageInfo: {
-                      id: tempImageId,
-                      filename: imageFile.name,
-                      cosKey: uploadResult.cos_key
-                    }
-                  }
-                })
-              }
+                }
+              })
             } 
             else {
               console.error('拖拽图片上传失败:', uploadResult.message)

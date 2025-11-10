@@ -57,7 +57,8 @@ export default () => {
    * @param image 图片数据（ImageItem对象）
    */
   const createImageElement = (image: ImageItem) => {
-    const src = image.url
+    let src = image.url
+    const cosKey = image.cos_key || image.id
 
     // 如果URL为空（临时图片），使用占位图
     if (!src) {
@@ -78,10 +79,23 @@ export default () => {
         imageInfo: {
           id: image.id,
           filename: image.filename || image.original_filename,
-          cosKey: image.id // COS key就是图片ID
+          cosKey: cosKey
         }
       })
       return
+    }
+
+    // 判断src是否为cos_key（不是完整URL）
+    // cos_key格式：images/xxx/yyy.jpg
+    // 完整URL格式：http://... 或 https://...
+    const isFullUrl = /^https?:\/\//i.test(src)
+    const isCosKey = !isFullUrl && src.startsWith('images/')
+
+    // 如果是cos_key，需要转换为实际可用的URL
+    // 这里存储cos_key，让SmartImage组件自动处理代理
+    if (isCosKey) {
+      // src保持为cos_key，SmartImage会自动通过代理访问
+      // 不需要在这里转换
     }
 
     // 如果已经有尺寸信息，直接使用
@@ -115,42 +129,68 @@ export default () => {
         imageInfo: {
           id: image.id,
           filename: image.filename || image.original_filename,
-          cosKey: image.id // COS key就是图片ID
+          cosKey: cosKey
         }
       })
     }
     else {
-      // 如果没有尺寸信息，使用原来的方式获取尺寸
-      getImageSize(src).then(({ width, height }) => {
-        const scale = height / width
-
-        if (scale < viewportRatio.value && width > viewportSize.value) {
-          width = viewportSize.value
-          height = width * scale
-        }
-        else if (height > viewportSize.value * viewportRatio.value) {
-          height = viewportSize.value * viewportRatio.value
-          width = height / scale
-        }
+      // 如果没有尺寸信息，需要获取图片尺寸
+      // 对于cos_key，使用默认尺寸，因为无法直接获取
+      if (isCosKey) {
+        const defaultWidth = 400
+        const defaultHeight = 300
 
         createElement({
           type: 'image',
           id: nanoid(10),
           src,
-          width,
-          height,
-          left: (viewportSize.value - width) / 2,
-          top: (viewportSize.value * viewportRatio.value - height) / 2,
+          width: defaultWidth,
+          height: defaultHeight,
+          left: (viewportSize.value - defaultWidth) / 2,
+          top: (viewportSize.value * viewportRatio.value - defaultHeight) / 2,
           fixedRatio: true,
           rotate: 0,
           // 存储图片元数据
           imageInfo: {
             id: image.id,
             filename: image.filename || image.original_filename,
-            cosKey: image.id
+            cosKey: cosKey
           }
         })
-      })
+      }
+      else {
+        // 对于完整URL，使用原来的方式获取尺寸
+        getImageSize(src).then(({ width, height }) => {
+          const scale = height / width
+
+          if (scale < viewportRatio.value && width > viewportSize.value) {
+            width = viewportSize.value
+            height = width * scale
+          }
+          else if (height > viewportSize.value * viewportRatio.value) {
+            height = viewportSize.value * viewportRatio.value
+            width = height / scale
+          }
+
+          createElement({
+            type: 'image',
+            id: nanoid(10),
+            src,
+            width,
+            height,
+            left: (viewportSize.value - width) / 2,
+            top: (viewportSize.value * viewportRatio.value - height) / 2,
+            fixedRatio: true,
+            rotate: 0,
+            // 存储图片元数据
+            imageInfo: {
+              id: image.id,
+              filename: image.filename || image.original_filename,
+              cosKey: cosKey
+            }
+          })
+        })
+      }
     }
   }
   

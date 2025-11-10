@@ -251,7 +251,7 @@ const handleImageInsert = (image: any) => {
     imageInfo: {
       id: image.id,
       filename: image.filename || image.original_filename,
-      cosKey: image.id
+      cosKey: image.cos_key || image.id
     }
   })
   showImageManager.value = false
