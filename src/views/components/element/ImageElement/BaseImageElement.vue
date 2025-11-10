@@ -24,6 +24,7 @@
         <div class="image-content" :style="{ clipPath: clipShape.style }">
           <SmartImage
             :src="elementInfo.src"
+            :image-key="elementInfo.src"
             alt=""
             size="custom"
             :width="elementInfo.width"

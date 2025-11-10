@@ -1,8 +1,8 @@
 <template>
   <div class="image-style-panel">
-    <div 
+    <div
       class="origin-image"
-      :style="{ backgroundImage: `url(${handleImageElement.src})` }"
+      :style="{ backgroundImage: `url(${getProxyUrl(handleImageElement.src)})` }"
     ></div>
 
     <ElementFlip />
@@ -14,9 +14,9 @@
           <div class="clip">
             <div class="title">按形状：</div>
             <div class="shape-clip">
-              <div 
-                class="shape-clip-item" 
-                v-for="(item, key) in shapeClipPathOptions" 
+              <div
+                class="shape-clip-item"
+                v-for="(item, key) in shapeClipPathOptions"
                 :key="key"
                 @click="presetImageClip(key as string)"
               >
@@ -27,7 +27,7 @@
             <template v-for="typeItem in ratioClipOptions" :key="typeItem.label">
               <div class="title" v-if="typeItem.label">按{{typeItem.label}}：</div>
               <ButtonGroup class="row">
-                <Button 
+                <Button
                   style="flex: 1;"
                   v-for="item in typeItem.children"
                   :key="item.key"
@@ -75,13 +75,14 @@
 </template>
 
 <script lang="ts" setup>
-import { type Ref, ref } from 'vue'
+import { type Ref, ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useMainStore, useSlidesStore } from '@/store'
 import ImageManager from '@/components/image/ImageManager.vue'
 import type { PPTImageElement, SlideBackground } from '@/types/slides'
 import { CLIPPATHS } from '@/configs/imageClip'
 import useHistorySnapshot from '@/hooks/useHistorySnapshot'
+import { API_CONFIG } from '@/configs/api'
 
 import ElementOutline from '../common/ElementOutline.vue'
 import ElementShadow from '../common/ElementShadow.vue'
@@ -140,6 +141,11 @@ const clipPanelVisible = ref(false)
 const showImageManager = ref(false)
 
 const { addHistorySnapshot } = useHistorySnapshot()
+
+// 获取图片代理URL
+const getProxyUrl = (imageKey: string): string => {
+  return `${API_CONFIG.IMAGE_PROXY.PROXY(imageKey)}?mode=redirect`
+}
 
 // 打开自由裁剪
 const clipImage = () => {
@@ -286,7 +292,7 @@ const setBackgroundImage = () => {
     ...currentSlide.value.background,
     type: 'image',
     image: {
-      src: _handleElement.src,
+      src: getProxyUrl(_handleElement.src),  // 使用代理URL确保可以访问
       size: 'cover'
     },
   }

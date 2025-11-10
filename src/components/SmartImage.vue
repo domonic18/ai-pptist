@@ -106,6 +106,7 @@ import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Picture, Refresh, Loading, Coin } from '@element-plus/icons-vue'
 import { useSmartImage, ProxyMode, ImageLoadingState, type SmartImageOptions } from '@/composables/useSmartImage'
+import { API_CONFIG } from '@/configs/api'
 
 // Props
 type ImageSize = 'small' | 'medium' | 'large' | 'custom'
@@ -190,9 +191,8 @@ const displaySrc = computed(() => {
   if (currentUrl.value) {
     return currentUrl.value
   }
-  if (props.src) {
-    return props.src
-  }
+  // 移除直接返回props.src的逻辑，避免直接使用cos_key
+  // 如果currentUrl为空，返回空字符串或占位图
   return props.placeholder || ''
 })
 
@@ -309,6 +309,16 @@ const errorIconSize = computed(() => {
   return sizeMap[props.size || 'medium']
 })
 
+// 检查是否为base64数据URI
+const isDataURI = (url: string): boolean => {
+  return url.startsWith('data:')
+}
+
+// 检查是否为图片数据URI
+const isImageDataURI = (url: string): boolean => {
+  return url.startsWith('data:image/')
+}
+
 // 加载图片
 async function load() {
   try {
@@ -319,10 +329,36 @@ async function load() {
         emit('error', result.error)
       }
     }
-    // 如果没有imageKey但有src，直接使用src
+    // 如果没有imageKey但有src
     else if (props.src) {
-      currentUrl.value = props.src
-      // 让浏览器自然处理加载，不要手动设置状态
+      // 如果是base64数据URI，直接使用
+      if (isDataURI(props.src)) {
+        // 如果是图片数据URI，检查是否为支持的格式
+        if (isImageDataURI(props.src)) {
+          const unsupportedFormats = ['tiff', 'tif', 'bmp']
+          const formatMatch = props.src.match(/^data:image\/(\w+)/i)
+          const format = formatMatch ? formatMatch[1].toLowerCase() : ''
+
+          if (unsupportedFormats.includes(format)) {
+            console.warn(`SmartImage: 不支持的图片格式 ${format.toUpperCase()}，将使用占位图`)
+            // 不支持的格式，标记为错误
+            loadingState.value = ImageLoadingState.ERROR
+            error.value = new ImageError(
+              `不支持的图片格式: ${format.toUpperCase()}`,
+              ImageErrorType.UNKNOWN
+            )
+            emit('error', error.value)
+            return
+          }
+        }
+
+        // 支持的数据URI，直接使用
+        currentUrl.value = props.src
+      } else {
+        // 如果是cos_key（images/.../xxx.jpg），使用代理
+        const proxyUrl = `${API_CONFIG.IMAGE_PROXY.PROXY(props.src)}?mode=redirect`
+        currentUrl.value = proxyUrl
+      }
     } else {
       console.warn('SmartImage: imageKey or src is required')
     }

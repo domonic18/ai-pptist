@@ -89,9 +89,11 @@
                 @click="handleOptimize"
                 :disabled="!prompt.trim() || loading"
                 class="send-button"
+                :class="{ 'is-loading': loading }"
                 title="发送给AI优化幻灯片"
               >
-                <el-icon><Promotion /></el-icon>
+                <el-icon v-if="loading" class="loading"><Loading /></el-icon>
+                <el-icon v-else><Promotion /></el-icon>
               </button>
             </div>
           </div>
@@ -376,6 +378,16 @@ onMounted(() => {
           opacity: 0.5;
           cursor: not-allowed;
         }
+
+        &.is-loading {
+          background-color: #64748b;
+          cursor: not-allowed;
+          animation: pulse 1.5s ease-in-out infinite;
+
+          .loading {
+            animation: spin 1s linear infinite;
+          }
+        }
       }
     }
   }
@@ -548,6 +560,29 @@ onMounted(() => {
 
 @keyframes loading-rotate {
   100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Pulse动画（用于加载中的按钮） */
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* 旋转动画（用于图标的加载状态） */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
     transform: rotate(360deg);
   }
 }

@@ -1,5 +1,5 @@
 <template>
-  <div 
+  <div
     class="editable-element-image"
     :class="{ 'lock': elementInfo.lock }"
     :style="{
@@ -25,7 +25,7 @@
         :clipPath="clipShape.style"
         @clip="range => handleClip(range)"
       />
-      <div 
+      <div
         class="element-content"
         v-else
         :style="{
@@ -33,23 +33,34 @@
           transform: flipStyle,
         }"
         v-contextmenu="contextmenus"
-        @mousedown="$event => handleSelectElement($event)" 
-        @touchstart="$event => handleSelectElement($event)" 
+        @mousedown="$event => handleSelectElement($event)"
+        @touchstart="$event => handleSelectElement($event)"
       >
         <ImageOutline :elementInfo="elementInfo" />
 
         <div class="image-content" :style="{ clipPath: clipShape.style }">
-          <img 
-            :src="elementInfo.src" 
-            :draggable="false" 
+          <SmartImage
+            :src="elementInfo.src"
+            :image-key="elementInfo.src"
+            :draggable="false"
+            size="custom"
+            :width="elementInfo.width"
+            :height="elementInfo.height"
             :style="{
               top: imgPosition.top,
               left: imgPosition.left,
               width: imgPosition.width,
               height: imgPosition.height,
               filter: filter,
-            }" 
-            @dragstart.prevent
+            }"
+            :options="{
+              useProxy: true,
+              proxyMode: 'redirect',
+              maxRetries: 3
+            }"
+            :show-indicator="false"
+            :show-actions="false"
+            :preview="false"
             alt=""
           />
           <div class="color-mask"
@@ -79,6 +90,7 @@ import useFilter from './useFilter'
 
 import ImageOutline from './ImageOutline/index.vue'
 import ImageClipHandler from './ImageClipHandler.vue'
+import SmartImage from '@/components/SmartImage.vue'
 
 const props = defineProps<{
   elementInfo: PPTImageElement

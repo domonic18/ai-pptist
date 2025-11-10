@@ -1,5 +1,11 @@
 import { type Ref, computed } from 'vue'
 import type { SlideBackground } from '@/types/slides'
+import { API_CONFIG } from '@/configs/api'
+
+// 获取图片代理URL
+const getProxyUrl = (imageKey: string): string => {
+  return `${API_CONFIG.IMAGE_PROXY.PROXY(imageKey)}?mode=redirect`
+}
 
 // 将页面背景数据转换为css样式
 export default (background: Ref<SlideBackground | undefined>) => {
@@ -21,15 +27,17 @@ export default (background: Ref<SlideBackground | undefined>) => {
     else if (type === 'image' && image) {
       const { src, size } = image
       if (!src) return { backgroundColor: '#fff' }
+      // 使用代理URL访问图片，确保URL过期后仍可访问
+      const proxyUrl = getProxyUrl(src)
       if (size === 'repeat') {
         return {
-          backgroundImage: `url(${src}`,
+          backgroundImage: `url(${proxyUrl}`,
           backgroundRepeat: 'repeat',
           backgroundSize: 'contain',
         }
       }
       return {
-        backgroundImage: `url(${src}`,
+        backgroundImage: `url(${proxyUrl}`,
         backgroundRepeat: 'no-repeat',
         backgroundSize: size || 'cover',
       }

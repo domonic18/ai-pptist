@@ -288,7 +288,7 @@ export default () => {
   }
 
   // 处理base64图片上传到COS（静默模式，不显示提示），支持滤重
-  const uploadBase64ImageSilent = async (base64Data: string, filename: string, imageCache: Map<string, { success: boolean; image_url: string; image_id: string; cos_key: string; message: string }>): Promise<{ success: boolean; image_url: string; image_id: string; cos_key: string; message: string }> => {
+  const uploadBase64ImageSilent = async (base64Data: string, filename: string, imageCache: Map<string, { success: boolean; image_id: string; cos_key: string; message: string }>): Promise<{ success: boolean; image_id: string; cos_key: string; message: string }> => {
     try {
       // 生成图片内容的SHA-256哈希作为唯一标识
       const imageHash = await generateSHA256(base64Data)
@@ -310,12 +310,11 @@ export default () => {
       const uploadResult = await uploadImage(file)
 
       if (uploadResult.success) {
-        // 获取预签名URL
+        // 获取预签名URL（仅用于上传验证，不存储）
         try {
-          const presignedUrlResult = await getImageAccessUrl(uploadResult.image_id)
+          await getImageAccessUrl(uploadResult.image_id)
           const result = {
             ...uploadResult,
-            image_url: presignedUrlResult.url,
             imageId: uploadResult.image_id
           }
           // 将结果存入缓存
@@ -323,7 +322,7 @@ export default () => {
           return result
         }
         catch (urlError) {
-          // 如果获取预签名URL失败，回退到原始URL
+          // 如果获取预签名URL失败，仍然返回上传结果
           const result = {
             ...uploadResult,
             imageId: uploadResult.image_id
@@ -342,7 +341,6 @@ export default () => {
       const errorMessage = error instanceof Error ? error.message : '上传失败'
       const result = {
         success: false,
-        image_url: '',
         image_id: '',
         cos_key: '',
         message: errorMessage
@@ -408,7 +406,7 @@ export default () => {
               background = {
                 type: 'image',
                 image: {
-                  src: uploadResult.image_url,
+                  src: uploadResult.cos_key,
                   size: 'cover',
                   // 添加imageInfo字段存储持久化信息
                   imageInfo: {
@@ -521,7 +519,7 @@ export default () => {
                 const element: PPTImageElement = {
                   type: 'image',
                   id: nanoid(10),
-                  src: uploadResult.success ? uploadResult.image_url : el.src, // 上传成功使用预签名URL，失败使用原始URL
+                  src: uploadResult.success ? uploadResult.cos_key : el.src, // 上传成功使用cos_key，失败使用原始URL
                   width: el.width,
                   height: el.height,
                   left: el.left,
@@ -604,7 +602,7 @@ export default () => {
                 slide.elements.push({
                   type: 'image',
                   id: nanoid(10),
-                  src: uploadResult.success ? uploadResult.image_url : el.picBase64,
+                  src: uploadResult.success ? uploadResult.cos_key : el.picBase64,
                   width: el.width,
                   height: el.height,
                   left: el.left,
@@ -696,13 +694,13 @@ export default () => {
                   try {
                     const uploadResult = await uploadBase64ImageSilent(el.fill.value.picBase64, `shape_pattern_${nanoid(8)}.png`, imageCache)
                     if (uploadResult.success) {
-                      pattern = uploadResult.image_url
-                    } 
+                      pattern = uploadResult.cos_key
+                    }
                     else {
                       // 上传失败，使用原始base64
                       pattern = el.fill.value.picBase64
                     }
-                  } 
+                  }
                   catch (error) {
                     pattern = el.fill.value.picBase64
                   }
