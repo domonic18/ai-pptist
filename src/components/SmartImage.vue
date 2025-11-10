@@ -105,7 +105,7 @@
 import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Picture, Refresh, Loading, Coin } from '@element-plus/icons-vue'
-import { useSmartImage, ProxyMode, ImageLoadingState, type SmartImageOptions } from '@/composables/useSmartImage'
+import { useSmartImage, ProxyMode, ImageLoadingState, type SmartImageOptions, ImageError, ImageErrorType } from '@/composables/useSmartImage'
 import { API_CONFIG } from '@/configs/api'
 
 // Props

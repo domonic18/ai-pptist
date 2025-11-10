@@ -55,7 +55,7 @@
             }"
             :options="{
               useProxy: true,
-              proxyMode: 'redirect',
+              proxyMode: ProxyMode.REDIRECT,
               maxRetries: 3
             }"
             :show-indicator="false"
@@ -91,6 +91,7 @@ import useFilter from './useFilter'
 import ImageOutline from './ImageOutline/index.vue'
 import ImageClipHandler from './ImageClipHandler.vue'
 import SmartImage from '@/components/SmartImage.vue'
+import { ProxyMode } from '@/composables/useSmartImage'
 
 const props = defineProps<{
   elementInfo: PPTImageElement

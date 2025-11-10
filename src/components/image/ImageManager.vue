@@ -276,29 +276,8 @@ const handleFileUpload = async (...args: any[]) => {
         throw new Error(uploadResult.message || '上传失败')
       }
 
-      // 添加到图片列表 - 先获取图片详情，再获取预签名URL
+      // 添加到图片列表 - 获取图片详情（现在返回的是cos_key）
       const imageDetail = await getImageDetail(uploadResult.image_id)
-      
-      // 获取预签名访问URL (这是关键修复 - 确保新上传的图片也有预签名URL)
-      let presignedUrl = imageDetail.url
-      try {
-        const urlResponse = await getImageAccessUrl(uploadResult.image_id)
-        presignedUrl = urlResponse.url || imageDetail.url
-        
-        // 调试信息（生产环境可移除）
-        // eslint-disable-next-line no-console
-        console.log('Image detail URL:', imageDetail.url)
-        // eslint-disable-next-line no-console
-        console.log('Access URL response:', urlResponse)
-        // eslint-disable-next-line no-console
-        console.log('Final presigned URL:', presignedUrl)
-      }
-      catch (urlError) {
-        // eslint-disable-next-line no-console
-        console.warn('获取预签名URL失败，使用图片详情中的URL:', urlError)
-        // 回退到图片详情中的URL
-        presignedUrl = imageDetail.url
-      }
 
       const newImage = {
         id: imageDetail.id,
@@ -306,12 +285,13 @@ const handleFileUpload = async (...args: any[]) => {
         filename: imageDetail.filename || '',
         file_size: imageDetail.file_size || 0,
         mime_type: imageDetail.mime_type || '',
-        url: presignedUrl, // 使用预签名URL
-        thumbnail_url: presignedUrl, // 缩略图也使用预签名URL
+        url: imageDetail.cos_key, // 使用cos_key，让SmartImage通过代理访问
+        thumbnail_url: imageDetail.cos_key, // 缩略图也使用cos_key
         width: imageDetail.width,
         height: imageDetail.height,
         created_at: imageDetail.created_at,
-        tags: imageDetail.tags || []
+        tags: imageDetail.tags || [],
+        cos_key: imageDetail.cos_key // 存储cos_key备用
       } as ImageItem & { source?: string }
 
       newImage.source_type = 'uploaded'
