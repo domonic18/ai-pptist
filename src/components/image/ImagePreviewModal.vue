@@ -10,10 +10,16 @@
     <div class="preview-content">
       <!-- 图片展示区 -->
       <div class="preview-image-container">
-        <img
-          :src="previewImage?.url"
+        <SmartImage
+          :image-key="previewImage?.cos_key || previewImage?.url"
           :alt="previewImage?.filename || previewImage?.original_filename"
+          size="custom"
+          :width="'100%'"
+          :height="'100%'"
           class="preview-image"
+          :show-indicator="false"
+          :show-actions="false"
+          :preview="false"
         />
 
         <!-- 导航按钮 -->
@@ -136,6 +142,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { ArrowLeft, ArrowRight, Plus, Download, Delete } from '@element-plus/icons-vue'
+import SmartImage from '@/components/SmartImage.vue'
 
 const props = defineProps<{
   visible: boolean
@@ -245,8 +252,8 @@ const formatDate = (dateString: string): string => {
 }
 
 .preview-image {
-  max-width: 100%;
-  max-height: 100%;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
 }
 
