@@ -47,6 +47,7 @@
           <Divider :margin="10" />
           <PopoverMenuItem class="popover-menu-item" @click="resetSlides(); mainMenuVisible = false"><IconRefresh class="icon" /> 重置幻灯片</PopoverMenuItem>
           <PopoverMenuItem class="popover-menu-item" @click="openMarkupPanel(); mainMenuVisible = false"><IconMark class="icon" /> 幻灯片类型标注</PopoverMenuItem>
+          <PopoverMenuItem class="popover-menu-item" @click="openAutoAnnotation(); mainMenuVisible = false"><IconMark class="icon" /> 自动标注</PopoverMenuItem>
           <PopoverMenuItem class="popover-menu-item" @click="openImageManager()"><IconPicture class="icon" /> 图片资源管理</PopoverMenuItem>
           <PopoverMenuItem class="popover-menu-item" @click="openModelManager()"><IconCode class="icon" /> 模型配置管理</PopoverMenuItem>
           <PopoverMenuItem class="popover-menu-item" @click="mainMenuVisible = false; hotkeyDrawerVisible = true"><IconCommand class="icon" /> 快捷操作</PopoverMenuItem>
@@ -127,18 +128,48 @@
       </div>
     </Modal>
 
+    <Modal
+      v-model:visible="autoAnnotationVisible"
+      :width="800"
+      :contentStyle="{ height: '600px' }"
+      :close-button="true"
+    >
+      <div class="auto-annotation-container">
+        <div class="auto-annotation-header">
+          <h2 class="annotation-title">自动标注</h2>
+        </div>
+        <div class="auto-annotation-content">
+          <AutoAnnotationDialog
+            :visible="autoAnnotationVisible"
+            :slides="currentSlides"
+            :task-id="annotation.taskId.value"
+            :is-processing="annotation.isProcessing.value"
+            :is-completed="annotation.isCompleted.value"
+            :progress="annotation.progress"
+            :results="annotation.results.value"
+            @update:visible="autoAnnotationVisible = $event"
+            @start-annotation="handleStartAnnotation"
+            @cancel-annotation="handleCancelAnnotation"
+            @apply-results="handleApplyResults"
+            @view-details="handleViewDetails"
+          />
+        </div>
+      </div>
+    </Modal>
+
     <FullscreenSpin :loading="exporting" tip="正在导入..." />
   </div>
 </template>
 
 <script lang="ts" setup>
-import { nextTick, ref, useTemplateRef } from 'vue'
+import { nextTick, ref, useTemplateRef, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useMainStore, useSlidesStore } from '@/store'
 import useScreening from '@/hooks/useScreening'
 import useImport from '@/hooks/useImport'
 import useSlideHandler from '@/hooks/useSlideHandler'
 import useCreateElement from '@/hooks/useCreateElement'
+import { useAnnotation } from '@/composables/useAnnotation'
 import type { DialogForExportTypes } from '@/types/export'
 
 import HotkeyDoc from './HotkeyDoc.vue'
@@ -151,18 +182,50 @@ import PopoverMenuItem from '@/components/PopoverMenuItem.vue'
 import Divider from '@/components/Divider.vue'
 import Modal from '@/components/Modal.vue'
 import ImageManager from '@/components/image/ImageManager.vue'
+import AutoAnnotationDialog from '@/components/annotation/AutoAnnotationDialog.vue'
 
 const mainStore = useMainStore()
 const slidesStore = useSlidesStore()
-const { title } = storeToRefs(slidesStore)
+const { title, slides: currentSlides } = storeToRefs(slidesStore)
 const { enterScreening, enterScreeningFromStart } = useScreening()
 const { importSpecificFile, importPPTXFile, importJSON, exporting } = useImport()
 const { resetSlides } = useSlideHandler()
 const { createImageElement } = useCreateElement()
 
+// 自动标注功能
+const annotation = useAnnotation()
+
+// 处理自动标注事件
+const handleStartAnnotation = async (config: any) => {
+  try {
+    const success = await annotation.startAnnotation(currentSlides.value, config)
+    if (success) {
+      // 启动成功后，对话框会通过进度轮询更新状态
+      console.log('自动标注任务已启动')
+    }
+  } catch (error) {
+    console.error('启动自动标注失败:', error)
+  }
+}
+
+const handleCancelAnnotation = async () => {
+  await annotation.cancelAnnotation()
+}
+
+const handleApplyResults = (results: any) => {
+  console.log('应用标注结果:', results)
+  // TODO: 实现应用标注结果的逻辑
+}
+
+const handleViewDetails = (taskId: string) => {
+  console.log('查看标注详情:', taskId)
+  // TODO: 实现查看详情的逻辑
+}
+
 const mainMenuVisible = ref(false)
 const hotkeyDrawerVisible = ref(false)
 const imageManagerVisible = ref(false)
+const autoAnnotationVisible = ref(false)
 const editingTitle = ref(false)
 const titleValue = ref('')
 const titleInputRef = useTemplateRef<InstanceType<typeof Input>>('titleInputRef')
@@ -203,6 +266,11 @@ const openImageManager = () => {
 
 const openModelManager = () => {
   mainStore.setModelManagerState(true)
+  mainMenuVisible.value = false
+}
+
+const openAutoAnnotation = () => {
+  autoAnnotationVisible.value = true
   mainMenuVisible.value = false
 }
 

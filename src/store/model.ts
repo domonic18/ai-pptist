@@ -14,6 +14,7 @@ export interface ModelData {
   maxTokens: string
   isEnabled: boolean
   isDefault: boolean
+  supportsVision: boolean
   createTime: string
 }
 
@@ -53,6 +54,7 @@ export const useModelStore = defineStore('model', () => {
       maxTokens: model.max_tokens || '8192',
       isEnabled: model.is_enabled,
       isDefault: model.is_default,
+      supportsVision: model.supports_vision || false,
       createTime: model.created_at || new Date().toISOString()
     }))
   }
@@ -73,7 +75,7 @@ export const useModelStore = defineStore('model', () => {
       supports_image_generation: model.type === 'image',
       supports_chat: model.type === 'text',
       supports_embeddings: false,
-      supports_vision: false,
+      supports_vision: model.supportsVision,
       supports_tools: false
     }
 
@@ -93,6 +95,7 @@ export const useModelStore = defineStore('model', () => {
       maxTokens: createdModel.max_tokens || '8192',
       isEnabled: createdModel.is_enabled,
       isDefault: createdModel.is_default,
+      supportsVision: createdModel.supports_vision || false,
       createTime: createdModel.created_at || new Date().toISOString()
     }
 
@@ -119,7 +122,7 @@ export const useModelStore = defineStore('model', () => {
       supports_chat: updatedModel.type === 'text',
       // 保留其他能力配置
       supports_embeddings: currentModelDetail.supports_embeddings || false,
-      supports_vision: currentModelDetail.supports_vision || false,
+      supports_vision: updatedModel.supportsVision,
       supports_tools: currentModelDetail.supports_tools || false
     }
 

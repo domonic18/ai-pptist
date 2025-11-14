@@ -123,6 +123,18 @@ export const API_CONFIG = {
     OPTIMIZE: '/api/v1/layout/optimize',
   },
 
+  // 自动标注相关API
+  ANNOTATION: {
+    // 启动自动标注
+    START: '/api/v1/annotation/start',
+    // 获取标注进度
+    PROGRESS: (taskId: string) => `/api/v1/annotation/progress/${taskId}`,
+    // 获取标注结果
+    RESULTS: (taskId: string) => `/api/v1/annotation/results/${taskId}`,
+    // 提交用户修正
+    CORRECTIONS: '/api/v1/annotation/corrections',
+  },
+
   // 其他API端点可以根据需要继续添加
 } as const
 

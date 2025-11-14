@@ -42,6 +42,7 @@ export interface MainState {
   showModelManager: boolean
   showImageGeneration: boolean,
   isImageGenerationPage: boolean
+  showAutoAnnotation: boolean
 }
 
 const nanoid = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz')
@@ -83,6 +84,7 @@ export const useMainStore = defineStore('main', {
     showModelManager: false, // 打开模型管理器
     showImageGeneration: false, // 打开图片生成
     isImageGenerationPage: false, // 是否为独立页面
+    showAutoAnnotation: false, // 打开自动标注
   }),
 
   getters: {
@@ -235,6 +237,10 @@ export const useMainStore = defineStore('main', {
 
     setImageGenerationPageState(show: boolean) {
       this.isImageGenerationPage = show
+    },
+
+    setAutoAnnotationState(show: boolean) {
+      this.showAutoAnnotation = show
     },
   },
 })

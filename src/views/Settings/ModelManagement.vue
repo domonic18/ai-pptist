@@ -99,20 +99,9 @@
     destroy-on-close
   >
     <div class="p-4">
-      <el-form ref="formRef" :model="modelForm" :rules="rules" label-width="100px">
+      <el-form ref="formRef" :model="modelForm" :rules="rules" label-width="120px">
         <el-form-item label="显示名称" prop="name">
-          <el-input v-model="modelForm.name" placeholder="请输入模型显示名称" />
-          <template #label>
-            <span class="flex items-center">
-              显示名称
-              <el-tooltip
-                content="在前端界面中显示的模型名称，便于用户识别"
-                placement="top"
-              >
-                <el-icon class="ml-1 cursor-help"><QuestionFilled /></el-icon>
-              </el-tooltip>
-            </span>
-          </template>
+          <el-input v-model="modelForm.name" placeholder="请输入模型显示名称，该名称用于在下拉列表中显示" />
         </el-form-item>
         <el-form-item label="模型类型" prop="type">
           <el-select
@@ -157,18 +146,7 @@
           />
         </el-form-item>
         <el-form-item label="模型名称" prop="modelName">
-          <el-input v-model="modelForm.modelName" placeholder="请输入具体的模型名称" />
-          <template #label>
-            <span class="flex items-center">
-              模型名称
-              <el-tooltip
-                content="调用模型API时实际使用的模型名称，如：gpt-4、qwen-turbo等"
-                placement="top"
-              >
-                <el-icon class="ml-1 cursor-help"><QuestionFilled /></el-icon>
-              </el-tooltip>
-            </span>
-          </template>
+          <el-input v-model="modelForm.modelName" placeholder="请输入具体模型名称，该名称用于模型调用，例如：deepseek-chat" />
         </el-form-item>
         <el-form-item label="最大Token数" prop="maxTokens">
           <el-input
@@ -181,6 +159,20 @@
         </el-form-item>
         <el-form-item label="设为默认" prop="isDefault">
           <el-switch v-model="modelForm.isDefault" />
+        </el-form-item>
+        <el-form-item label="是否支持视觉" prop="supportsVision">
+          <el-switch v-model="modelForm.supportsVision" />
+          <template #label>
+            <span class="flex items-center" style="width: 120px;">
+              是否支持视觉
+              <el-tooltip
+                content="该模型是否支持多模态视觉功能（如图片识别、分析等）"
+                placement="top"
+              >
+                <el-icon class="ml-1 cursor-help"><QuestionFilled /></el-icon>
+              </el-tooltip>
+            </span>
+          </template>
         </el-form-item>
       </el-form>
     </div>
@@ -225,6 +217,7 @@ export default defineComponent({
       maxTokens: '8192',
       isEnabled: true,
       isDefault: false,
+      supportsVision: false,
       createTime: ''
     } as ModelData)
 
@@ -318,6 +311,7 @@ export default defineComponent({
             maxTokens: modelDetail.max_tokens || '8192',
             isEnabled: modelDetail.is_enabled,
             isDefault: modelDetail.is_default,
+            supportsVision: modelDetail.supports_vision || false,
             createTime: modelDetail.created_at || new Date().toISOString()
           } as ModelData
         }
@@ -339,6 +333,7 @@ export default defineComponent({
             maxTokens: row.maxTokens,
             isEnabled: row.isEnabled,
             isDefault: row.isDefault,
+            supportsVision: row.supportsVision || false,
             createTime: row.createTime
           } as ModelData
         }
@@ -357,6 +352,7 @@ export default defineComponent({
           maxTokens: row.maxTokens,
           isEnabled: row.isEnabled,
           isDefault: false, // 复制时默认不设为默认模型
+          supportsVision: row.supportsVision || false,
           createTime: ''
         } as ModelData
       }
@@ -374,8 +370,9 @@ export default defineComponent({
           maxTokens: '8192',
           isEnabled: true,
           isDefault: false,
+          supportsVision: false,
           createTime: ''
-        }
+        } as ModelData
       }
     }
 
@@ -436,6 +433,7 @@ export default defineComponent({
           maxTokens: modelDetail.max_tokens || '8192',
           isEnabled: modelDetail.is_enabled,
           isDefault: false, // 复制时默认不设为默认模型
+          supportsVision: modelDetail.supports_vision || false,
           createTime: ''
         } as ModelData
         openDrawer('add', copyData)
@@ -605,6 +603,11 @@ export default defineComponent({
 /* 表单内容区域增加内边距和间距 */
 .el-form-item {
   margin-bottom: 20px;
+}
+
+/* 调整Element Plus自动生成的星号位置 */
+:deep(.el-form-item.is-required.asterisk-left .el-form-item__label:before) {
+  margin-right: 4px;
 }
 
 .el-input,
