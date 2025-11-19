@@ -196,9 +196,9 @@ const { createImageElement } = useCreateElement()
 const annotation = useAnnotation()
 
 // 处理自动标注事件
-const handleStartAnnotation = async (config: any) => {
+const handleStartAnnotation = async (config: any, screenshots?: string[]) => {
   try {
-    const success = await annotation.startAnnotation(currentSlides.value, config)
+    const success = await annotation.startAnnotation(currentSlides.value, config, screenshots)
     if (success) {
       // 启动成功后，对话框会通过进度轮询更新状态
       console.log('自动标注任务已启动')

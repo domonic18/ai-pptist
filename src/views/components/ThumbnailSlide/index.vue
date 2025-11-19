@@ -5,7 +5,7 @@
       height: size * viewportRatio + 'px',
     }"
   >
-    <div 
+    <div
       class="elements"
       :style="{
         width: viewportSize + 'px',
