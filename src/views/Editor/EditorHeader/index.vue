@@ -170,6 +170,8 @@ import useImport from '@/hooks/useImport'
 import useSlideHandler from '@/hooks/useSlideHandler'
 import useCreateElement from '@/hooks/useCreateElement'
 import { useAnnotation } from '@/composables/useAnnotation'
+import { useAnnotationApplication } from '@/composables/annotation/useAnnotationApplication'
+import { useNotification } from '@/composables/useNotification'
 import type { DialogForExportTypes } from '@/types/export'
 
 import HotkeyDoc from './HotkeyDoc.vue'
@@ -212,9 +214,49 @@ const handleCancelAnnotation = async () => {
   await annotation.cancelAnnotation()
 }
 
-const handleApplyResults = (results: any) => {
+/**
+ * 处理标注结果应用
+ *
+ * 使用专门的 composable 处理标注结果应用业务逻辑
+ */
+const { applyAnnotationResults } = useAnnotationApplication()
+
+/**
+ * 通知系统
+ */
+const { showSuccess, showError } = useNotification()
+
+/**
+ * 标注结果应用事件处理
+ */
+const handleApplyResults = async (results: any) => {
   console.log('应用标注结果:', results)
-  // TODO: 实现应用标注结果的逻辑
+
+  if (!results || !results.results || results.results.length === 0) {
+    showError('没有可用的标注结果')
+    return
+  }
+
+  try {
+    // 调用独立的 composable 处理标注结果应用
+    const stats = await applyAnnotationResults(currentSlides.value, results)
+
+    // 显示成功消息
+    const message = `标注结果应用完成：
+- 成功: ${stats.successCount} 页
+- 失败: ${stats.failedCount} 页
+- 标注元素: ${stats.elementCount} 个`
+
+    console.log(message)
+    showSuccess(message, '标注成功')
+
+    // 关闭标注对话框
+    autoAnnotationVisible.value = false
+
+  } catch (error) {
+    console.error('应用标注结果时发生错误:', error)
+    showError('应用标注结果失败，请查看控制台了解详细信息')
+  }
 }
 
 const handleViewDetails = (taskId: string) => {
