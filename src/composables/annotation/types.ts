@@ -127,3 +127,40 @@ export enum ElementType {
   DECORATION = 'decoration',
   ICON = 'icon'
 }
+
+/**
+ * 标注结果应用映射配置
+ */
+export interface AnnotationMappingConfig {
+  pageType: Record<string, string>
+  contentType: Record<string, string>
+  textElementType: Record<string, string>
+  imageElementType: Record<string, string>
+  shapeElementType: Record<string, string>
+}
+
+/**
+ * AI标注源数据
+ */
+export interface AISourceAnnotation {
+  page_type?: {
+    type: string
+    confidence: number
+    reason: string
+  }
+  layout_type?: {
+    type: string
+    confidence: number
+    reason: string
+  }
+  element_annotations?: ElementAnnotationResult[]
+}
+
+/**
+ * 标注应用结果统计
+ */
+export interface ApplyAnnotationStats {
+  successCount: number
+  failedCount: number
+  elementCount: number
+}
