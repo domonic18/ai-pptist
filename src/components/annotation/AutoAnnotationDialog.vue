@@ -238,7 +238,7 @@ const props = defineProps<{
 // Emits
 const emit = defineEmits<{
   (e: 'update:visible', value: boolean): void
-  (e: 'start-annotation', config: AnnotationConfig, screenshots: string[]): void
+  (e: 'start-annotation', slides: any[], config: AnnotationConfig, screenshots: string[]): void
   (e: 'cancel-annotation'): void
   (e: 'apply-results', results: AnnotationResults): void
   (e: 'view-details', taskId: string): void
@@ -409,7 +409,8 @@ const startAnnotation = async () => {
       options: annotationOptions.value
     }
 
-    emit('start-annotation', config, screenshots)
+    // 传递 slides 作为第一个参数
+    emit('start-annotation', props.slides, config, screenshots)
 
     ElMessage.success('截图生成完毕，标注任务已开始')
   }

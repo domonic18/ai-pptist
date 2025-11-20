@@ -180,10 +180,17 @@ const { createImageElement } = useCreateElement()
 // 自动标注功能
 const annotation = useAnnotation()
 
+// 监听 showAutoAnnotation 状态变化，打开自动标注对话框
+watch(showAutoAnnotation, (newVal) => {
+  if (newVal) {
+    autoAnnotationVisible.value = true
+  }
+})
+
 // 处理自动标注事件
-const handleStartAnnotation = async (config: any, screenshots?: string[]) => {
+const handleStartAnnotation = async (slides: any[], config: any, screenshots?: string[]) => {
   try {
-    const success = await annotation.startAnnotation(currentSlides.value, config, screenshots)
+    const success = await annotation.startAnnotation(slides, config, screenshots)
     if (success) {
       // 启动成功后，对话框会通过进度轮询更新状态
       console.log('自动标注任务已启动')
