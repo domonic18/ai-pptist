@@ -112,7 +112,6 @@ import type {
 import MoveablePanel from '@/components/MoveablePanel.vue'
 import Select from '@/components/Select.vue'
 import Button from '@/components/Button.vue'
-import { IconMagic } from '@/components/Icon'
 
 const slidesStore = useSlidesStore()
 const mainStore = useMainStore()

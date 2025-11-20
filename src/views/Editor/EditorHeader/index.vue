@@ -144,7 +144,7 @@
 </template>
 
 <script lang="ts" setup>
-import { nextTick, ref, useTemplateRef, computed } from 'vue'
+import { nextTick, ref, useTemplateRef, computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useMainStore, useSlidesStore } from '@/store'
 import useScreening from '@/hooks/useScreening'
@@ -171,6 +171,7 @@ import AutoAnnotationDialog from '@/components/annotation/AutoAnnotationDialog.v
 const mainStore = useMainStore()
 const slidesStore = useSlidesStore()
 const { title, slides: currentSlides } = storeToRefs(slidesStore)
+const { showAutoAnnotation } = storeToRefs(mainStore)
 const { enterScreening, enterScreeningFromStart } = useScreening()
 const { importSpecificFile, importPPTXFile, importJSON, exporting } = useImport()
 const { resetSlides } = useSlideHandler()
