@@ -63,14 +63,11 @@
     <Button class="full-width-btn" @click="showImageManager = true"><IconTransform /> 替换图片</Button>
     <Button class="full-width-btn" @click="resetImage()"><IconUndo /> 重置样式</Button>
     <Button class="full-width-btn" @click="setBackgroundImage()"><IconTheme /> 设为背景</Button>
-    <Modal
+    <ImageManagerDialog
       :visible="showImageManager"
       @update:visible="val => showImageManager = val"
-      :width="1200"
-      :contentStyle="{ height: '800px' }"
-    >
-      <ImageManager @insert="handleImageInsert" />
-    </Modal>
+      @insert="handleImageInsert"
+    />
   </div>
 </template>
 
@@ -78,7 +75,7 @@
 import { type Ref, ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useMainStore, useSlidesStore } from '@/store'
-import ImageManager from '@/components/image/ImageManager.vue'
+import ImageManagerDialog from '@/components/image/ImageManagerDialog.vue'
 import type { PPTImageElement, SlideBackground } from '@/types/slides'
 import { CLIPPATHS } from '@/configs/imageClip'
 import useHistorySnapshot from '@/hooks/useHistorySnapshot'

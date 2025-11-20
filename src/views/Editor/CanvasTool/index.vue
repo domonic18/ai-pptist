@@ -117,13 +117,10 @@
       />
     </Modal>
 
-    <Modal
+    <ImageManagerDialog
       v-model:visible="showImageManager"
-      :width="1200"
-      :contentStyle="{ height: '800px' }"
-    >
-      <ImageManager @insert="handleImageInsert" />
-    </Modal>
+      @insert="handleImageInsert"
+    />
 
     <!-- 直接使用OptimizeSlideDialog，移除外层Modal嵌套 -->
     <OptimizeSlideDialog
@@ -150,7 +147,7 @@ import ChartPool from './ChartPool.vue'
 import TableGenerator from './TableGenerator.vue'
 import MediaInput from './MediaInput.vue'
 import LaTeXEditor from '@/components/LaTeXEditor/index.vue'
-import ImageManager from '@/components/image/ImageManager.vue'
+import ImageManagerDialog from '@/components/image/ImageManagerDialog.vue'
 import FileInput from '@/components/FileInput.vue'
 import OptimizeSlideDialog from '../OptimizeSlideDialog.vue'
 import Modal from '@/components/Modal.vue'

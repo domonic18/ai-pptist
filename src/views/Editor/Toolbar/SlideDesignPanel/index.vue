@@ -94,14 +94,11 @@
       <Button style="flex: 1;" @click="applyBackgroundAllSlide()"><IconCheck /> 应用背景到全部</Button>
     </div>
 
-    <Modal
+    <ImageManagerDialog
       :visible="showImageManager"
       @update:visible="val => showImageManager = val"
-      :width="1200"
-      :contentStyle="{ height: '800px' }"
-    >
-      <ImageManager @insert="handleBackgroundImageInsert" />
-    </Modal>
+      @insert="handleBackgroundImageInsert"
+    />
 
     <Divider />
 
@@ -324,7 +321,7 @@
 import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSlidesStore } from '@/store'
-import ImageManager from '@/components/image/ImageManager.vue'
+import ImageManagerDialog from '@/components/image/ImageManagerDialog.vue'
 import type {
   Gradient,
   GradientType,

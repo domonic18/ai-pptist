@@ -1,5 +1,5 @@
 <template>
-  <div class="image-manager-refactored">
+  <div class="image-manager">
     <div class="layout-container">
       <!-- 左侧功能区 -->
       <ImageSidebar
@@ -90,8 +90,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Picture } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import {
   getImageList,
   getImageDetail,
@@ -104,10 +103,8 @@ import {
   deleteSpecificImageTag,
   searchImages,
   uploadImage,
-  getImageAccessUrl,
   type ImageItem
 } from '@/services/image'
-import { API_CONFIG } from '@/configs/api'
 
 // 导入新组件
 import ImageSidebar from './ImageSidebar.vue'
@@ -146,7 +143,6 @@ const uploadProgress = ref(0)
 const searching = ref(false)
 
 // 计算属性
-const uploadUrl = computed(() => API_CONFIG.IMAGE_UPLOAD.UPLOAD)
 
 const filteredImages = computed(() => {
   return images.value.filter(image => {
@@ -187,10 +183,6 @@ const loadImages = async () => {
         ElMessage.success(`通过MetaInsight搜索找到 ${response.images.length} 张相关图片`)
         
         // 调试信息（生产环境可移除）
-        // eslint-disable-next-line no-console
-        console.log('搜索结果图片数量:', response.images.length)
-        // eslint-disable-next-line no-console
-        console.log('搜索结果详情:', response.images)
       }
       else {
         ElMessage.info('未找到相关图片，请尝试其他搜索词')
@@ -214,8 +206,6 @@ const loadImages = async () => {
   catch (error) {
     const errorMessage = searching.value ? '搜索图片失败' : '加载图片列表失败'
     ElMessage.error(errorMessage)
-    // eslint-disable-next-line no-console
-    console.error('图片操作失败:', error)
   }
   finally {
     loading.value = false
@@ -229,7 +219,6 @@ const loadTags = async () => {
   }
   catch (error) {
     ElMessage.error('加载标签失败')
-    console.error('加载标签失败:', error)
   }
 }
 
@@ -303,7 +292,6 @@ const handleFileUpload = async (...args: any[]) => {
     }
     catch (error) {
       ElMessage.error(`文件 ${file.name} 上传失败`)
-      console.error('上传失败:', error)
     }
   }
 
@@ -401,7 +389,6 @@ const addTag = async (tag: string) => {
 
   }
   catch (error) {
-    console.error('创建标签失败:', error)
     ElMessage.error('创建标签失败')
     throw error // 抛出错误让调用方知道操作失败
   }
@@ -421,7 +408,6 @@ const removeTag = async (tag: string) => {
     ElMessage.success('标签删除成功')
   }
   catch (error) {
-    console.error('删除标签失败:', error)
     ElMessage.error('删除标签失败')
   }
 }
@@ -436,7 +422,6 @@ const clearAllTags = async () => {
     ElMessage.success('所有标签已清空')
   }
   catch (error) {
-    console.error('清空标签失败:', error)
     ElMessage.error('清空标签失败')
   }
 }
@@ -461,7 +446,6 @@ const addImageTag = async (image: ImageItem, tag: string) => {
     }
   }
   catch (error) {
-    console.error('添加图片标签失败:', error)
     ElMessage.error('添加图片标签失败')
   }
 }
@@ -479,7 +463,6 @@ const removeImageTag = async (image: ImageItem, tag: string) => {
     }
   }
   catch (error) {
-    console.error('删除图片标签失败:', error)
     ElMessage.error('删除图片标签失败')
   }
 }
@@ -516,8 +499,9 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-.image-manager-refactored {
-  height: 100%;
+.image-manager {
+  min-height: 600px;
+  max-height: 70vh;
   background-color: #f5f7fa;
   padding: 20px;
 }
@@ -545,7 +529,7 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .image-manager-refactored {
+  .image-manager {
     padding: 12px;
   }
 
