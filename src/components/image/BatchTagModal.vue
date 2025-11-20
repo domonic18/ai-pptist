@@ -6,6 +6,7 @@
     :close-on-click-modal="false"
     @update:model-value="$emit('update:visible', $event)"
     @close="handleClose"
+    destroy-on-close
   >
     <div class="batch-tag-modal">
       <!-- 操作类型选择 -->

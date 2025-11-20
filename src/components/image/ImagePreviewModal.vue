@@ -6,6 +6,7 @@
     width="80%"
     :close-on-click-modal="false"
     custom-class="image-preview-modal"
+    destroy-on-close
   >
     <div class="preview-content">
       <!-- 图片展示区 -->

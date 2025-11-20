@@ -5,6 +5,7 @@
     title="标签管理"
     width="500px"
     :close-on-click-modal="false"
+    destroy-on-close
   >
     <div class="tag-manager">
       <!-- 现有标签 -->

@@ -6,6 +6,7 @@
     :before-close="handleClose"
     @update:model-value="$emit('update:visible', $event)"
     class="preview-modal"
+    destroy-on-close
   >
     <div v-if="previewImage" class="preview-content">
       <div class="preview-image">
