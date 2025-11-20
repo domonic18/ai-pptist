@@ -25,7 +25,7 @@ import api from '@/services'
 import Editor from './views/Editor/index.vue'
 import Screen from './views/Screen/index.vue'
 import Mobile from './views/Mobile/index.vue'
-import ImageGeneration from './views/ImageGeneration.vue'
+import ImageGeneration from './views/ImageGeneration/index.vue'
 import FullscreenSpin from '@/components/FullscreenSpin.vue'
 import UploadStatusPanel from '@/components/upload/UploadStatusPanel.vue'
 

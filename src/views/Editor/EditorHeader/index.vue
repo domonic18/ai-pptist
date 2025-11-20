@@ -112,50 +112,33 @@
       <template v-slot:title>快捷操作</template>
     </Drawer>
 
-    <Modal
-      v-model:visible="imageManagerVisible"
-      :width="1200"
-      :contentStyle="{ height: '800px' }"
-      :close-button="true"
+    <el-dialog
+      :model-value="imageManagerVisible"
+      @update:model-value="imageManagerVisible = $event"
+      title="图片资源管理"
+      width="1200px"
+      :close-on-click-modal="false"
+      :show-close="true"
+      destroy-on-close
+      class="image-manager-dialog"
     >
-      <div class="image-manager-container">
-        <div class="image-manager-header">
-          <h2 class="manager-title">图片资源管理</h2>
-        </div>
-        <div class="image-manager-content">
-          <ImageManager @insert="handleImageInsert" />
-        </div>
-      </div>
-    </Modal>
+      <ImageManager @insert="handleImageInsert" />
+    </el-dialog>
 
-    <Modal
-      v-model:visible="autoAnnotationVisible"
-      :width="800"
-      :contentStyle="{ height: '600px' }"
-      :close-button="true"
-    >
-      <div class="auto-annotation-container">
-        <div class="auto-annotation-header">
-          <h2 class="annotation-title">自动标注</h2>
-        </div>
-        <div class="auto-annotation-content">
-          <AutoAnnotationDialog
-            :visible="autoAnnotationVisible"
-            :slides="currentSlides"
-            :task-id="annotation.taskId.value"
-            :is-processing="annotation.isProcessing.value"
-            :is-completed="annotation.isCompleted.value"
-            :progress="annotation.progress"
-            :results="annotation.results.value"
-            @update:visible="autoAnnotationVisible = $event"
-            @start-annotation="handleStartAnnotation"
-            @cancel-annotation="handleCancelAnnotation"
-            @apply-results="handleApplyResults"
-            @view-details="handleViewDetails"
-          />
-        </div>
-      </div>
-    </Modal>
+    <AutoAnnotationDialog
+      :visible="autoAnnotationVisible"
+      :slides="currentSlides"
+      :task-id="annotation.taskId.value"
+      :is-processing="annotation.isProcessing.value"
+      :is-completed="annotation.isCompleted.value"
+      :progress="annotation.progress"
+      :results="annotation.results.value"
+      @update:visible="autoAnnotationVisible = $event"
+      @start-annotation="handleStartAnnotation"
+      @cancel-annotation="handleCancelAnnotation"
+      @apply-results="handleApplyResults"
+      @view-details="handleViewDetails"
+    />
 
     <FullscreenSpin :loading="exporting" tip="正在导入..." />
   </div>
@@ -525,28 +508,18 @@ const handleImageInsert = (image: any) => {
   height: 30px;
 }
 
-.image-manager-container {
-  height: 100%;
+/* 图片管理对话框样式 */
+:deep(.image-manager-dialog .el-dialog) {
+  height: 70vh;
+  max-height: 600px;
   display: flex;
   flex-direction: column;
 }
 
-.image-manager-header {
-  padding: 0 0 16px 0;
-  border-bottom: 1px solid #e4e7ed;
-  margin-bottom: 16px;
-
-  .manager-title {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-    color: #303133;
-  }
-}
-
-.image-manager-content {
+:deep(.image-manager-dialog .el-dialog__body) {
   flex: 1;
-  overflow: visible; /* Allow dropdowns to be visible */
-  position: relative;
+  padding: 0;
+  overflow: hidden;
 }
+
 </style>

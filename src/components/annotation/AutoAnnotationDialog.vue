@@ -3,9 +3,10 @@
     :model-value="visible"
     @update:model-value="$emit('update:visible', $event)"
     title="自动标注"
-    width="600px"
+    width="800px"
     :close-on-click-modal="false"
     :before-close="handleBeforeClose"
+    destroy-on-close
   >
     <div class="auto-annotation-dialog">
       <!-- 配置区域 -->

@@ -9,7 +9,7 @@
     @close="handleDialogCloseEvent"
     @closed="handleDialogClosedEvent"
     :before-close="handleBeforeClose"
-    append-to-body
+    destroy-on-close
   >
     <!-- 优化中状态 -->
     <div v-if="optimizing" class="optimizing-overlay">
