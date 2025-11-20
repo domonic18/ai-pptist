@@ -339,6 +339,15 @@ watch(() => props.visible, async (newVal) => {
   }
 })
 
+// 监听slides变化，确保隐藏的thumbnails正确更新
+watch(() => props.slides, async (newSlides) => {
+  if (newSlides && newSlides.length > 0) {
+    // 等待DOM更新
+    await nextTick()
+    console.log('幻灯片已更新，hiddenThumbnailsRef:', hiddenThumbnailsRef.value?.children.length)
+  }
+}, { deep: true })
+
 // 方法
 const loadAvailableModels = async () => {
   try {
@@ -379,14 +388,32 @@ const startAnnotation = async () => {
   try {
     // 等待渲染完成
     await nextTick()
-    
+
+    // 调试信息：检查幻灯片和容器
+    console.log('[自动标注] 幻灯片数量:', props.slides.length)
+    console.log('[自动标注] hiddenThumbnailsRef:', hiddenThumbnailsRef.value)
+    console.log('[自动标注] 子元素数量:', hiddenThumbnailsRef.value?.children.length)
+
     if (!hiddenThumbnailsRef.value) {
       throw new Error('无法获取缩略图容器')
     }
 
+    // 详细检查每个子元素
+    const elements = hiddenThumbnailsRef.value.children
+    console.log('[自动标注] 缩略图元素详情:')
+    for (let i = 0; i < elements.length; i++) {
+      const el = elements[i] as HTMLElement
+      console.log(`  幻灯片 ${i}:`, {
+        exists: !!el,
+        tagName: el?.tagName,
+        childrenCount: el?.children.length,
+        innerHTML: el?.innerHTML?.substring(0, 200)
+      })
+    }
+
     // 生成截图
     const screenshots = await generateScreenshotsFromContainer(
-      hiddenThumbnailsRef.value, 
+      hiddenThumbnailsRef.value,
       props.slides.length,
       {
         width: 800, // 与 ThumbnailSlide 的 size 保持一致
@@ -398,9 +425,19 @@ const startAnnotation = async () => {
 
     // 检查有效截图数量
     const validCount = screenshots.filter(s => s && s.length > 1000).length
-    console.log(`生成截图完成，有效数量: ${validCount}/${screenshots.length}`)
+    console.log(`[自动标注] 生成截图完成，有效数量: ${validCount}/${screenshots.length}`)
+
+    // 调试：详细检查每个截图
+    screenshots.forEach((s, i) => {
+      console.log(`[自动标注] 截图 ${i}:`, {
+        exists: !!s,
+        length: s?.length || 0,
+        isValid: s && s.length > 1000
+      })
+    })
 
     if (validCount === 0) {
+      console.error('[自动标注] 所有截图都无效')
       throw new Error('无法生成有效截图，请重试')
     }
 

@@ -47,7 +47,7 @@ const props = withDefaults(defineProps<{
 const { viewportRatio, viewportSize } = storeToRefs(useSlidesStore())
 
 const background = computed(() => props.slide.background)
-const { backgroundStyle } = useSlideBackgroundStyle(background)
+const { backgroundStyle } = useSlideBackgroundStyle(background, 'thumbnail')
 
 const scale = computed(() => props.size / viewportSize.value)
 provide(injectKeySlideScale, scale)

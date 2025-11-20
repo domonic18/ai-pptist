@@ -265,29 +265,6 @@ const imageStyle = computed(() => {
   return style
 })
 
-// 加载状态样式
-const loadingStyle = computed(() => ({
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: '100%',
-  height: '100%',
-  backgroundColor: '#f5f5f5'
-}))
-
-// 错误状态样式
-const errorStyle = computed(() => ({
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: '100%',
-  height: '100%',
-  backgroundColor: '#f5f5f5',
-  cursor: 'pointer'
-}))
-
 // 尺寸相关
 const spinnerSize = computed(() => {
   const sizeMap: Record<ImageSize, number> = {

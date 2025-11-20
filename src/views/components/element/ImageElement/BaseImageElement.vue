@@ -39,7 +39,7 @@
             }"
             :options="{
               useProxy: true,
-              proxyMode: ProxyMode.REDIRECT,
+              proxyMode: target === 'thumbnail' ? ProxyMode.PROXY : ProxyMode.REDIRECT,
               maxRetries: 3
             }"
             :show-indicator="false"
@@ -89,6 +89,7 @@ function handleError(error: any) {
 
 const props = defineProps<{
   elementInfo: PPTImageElement
+  target?: string
 }>()
 
 const shadow = computed(() => props.elementInfo.shadow)

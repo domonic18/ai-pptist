@@ -146,6 +146,10 @@ export function useAnnotationApplication() {
     // 重置统计
     resetStats()
 
+    // 调试信息：打印所有幻灯片ID和标注结果ID
+    console.log('当前幻灯片列表:', currentSlides.map(s => ({ id: s.id, type: s.type })))
+    console.log('标注结果列表:', annotationResults.results.map(r => ({ slide_id: r.slide_id, page_type: r.page_type })))
+
     // 遍历所有幻灯片标注结果
     for (const slideResult of annotationResults.results) {
       try {
@@ -156,13 +160,16 @@ export function useAnnotationApplication() {
 
         if (slideIndex === -1) {
           console.warn(`未找到幻灯片: ${slideResult.slide_id}`)
+          console.warn('可用幻灯片ID:', currentSlides.map(s => s.id))
           _stats.failedCount++
           continue
         }
 
         const slide: SlideData = currentSlides[slideIndex]
+        console.log(`应用标注到幻灯片[${slideIndex}]: ${slide.id} -> ${slideResult.slide_id}`)
         await applySlideAnnotation(slide, slideResult, slideIndex)
         _stats.successCount++
+        console.log(`标注应用成功: ${slide.id}`)
 
       } catch (error) {
         console.error(`应用标注到幻灯片 ${slideResult.slide_id} 失败:`, error)
@@ -170,6 +177,7 @@ export function useAnnotationApplication() {
       }
     }
 
+    console.log('标注应用完成，统计:', getStats())
     return getStats()
   }
 

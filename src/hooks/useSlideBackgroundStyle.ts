@@ -3,12 +3,12 @@ import type { SlideBackground } from '@/types/slides'
 import { API_CONFIG } from '@/configs/api'
 
 // 获取图片代理URL
-const getProxyUrl = (imageKey: string): string => {
-  return `${API_CONFIG.IMAGE_PROXY.PROXY(imageKey)}?mode=redirect`
+const getProxyUrl = (imageKey: string, mode: 'redirect' | 'proxy' = 'redirect'): string => {
+  return `${API_CONFIG.IMAGE_PROXY.PROXY(imageKey)}?mode=${mode}`
 }
 
 // 将页面背景数据转换为css样式
-export default (background: Ref<SlideBackground | undefined>) => {
+export default (background: Ref<SlideBackground | undefined>, target?: string) => {
   const backgroundStyle = computed(() => {
     if (!background.value) return { backgroundColor: '#fff' }
 
@@ -28,7 +28,9 @@ export default (background: Ref<SlideBackground | undefined>) => {
       const { src, size } = image
       if (!src) return { backgroundColor: '#fff' }
       // 使用代理URL访问图片，确保URL过期后仍可访问
-      const proxyUrl = getProxyUrl(src)
+      // 如果是缩略图，使用proxy模式避免CORS问题；如果是主编辑器，使用redirect模式
+      const proxyMode = target === 'thumbnail' ? 'proxy' : 'redirect'
+      const proxyUrl = getProxyUrl(src, proxyMode)
       if (size === 'repeat') {
         return {
           backgroundImage: `url(${proxyUrl}`,

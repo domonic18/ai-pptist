@@ -142,7 +142,8 @@ export const useSlidesStore = defineStore('slides', {
   
     updateSlide(props: Partial<Slide>, slideId?: string) {
       const slideIndex = slideId ? this.slides.findIndex(item => item.id === slideId) : this.slideIndex
-      this.slides[slideIndex] = { ...this.slides[slideIndex], ...props }
+      // 使用 splice 确保响应式更新
+      this.slides.splice(slideIndex, 1, { ...this.slides[slideIndex], ...props })
     },
   
     removeSlideProps(data: RemovePropData) {
