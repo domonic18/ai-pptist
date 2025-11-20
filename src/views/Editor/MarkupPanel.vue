@@ -9,6 +9,14 @@
     @close="close()"
   >
     <div class="container">
+      <!-- 自动标注按钮 -->
+      <div class="auto-annotate-row">
+        <Button type="primary" size="small" @click="openAutoAnnotation" class="auto-annotate-btn">
+          <IconMagic class="icon" />
+          自动标注
+        </Button>
+        <div class="auto-annotate-tip">AI 自动分析并标注幻灯片</div>
+      </div>
       <!-- 原有功能：页面类型标注 -->
       <div class="row">
         <div style="width: 40%">当前页面类型：</div>
@@ -103,6 +111,8 @@ import type {
 
 import MoveablePanel from '@/components/MoveablePanel.vue'
 import Select from '@/components/Select.vue'
+import Button from '@/components/Button.vue'
+import { IconMagic } from '@/components/Icon'
 
 const slidesStore = useSlidesStore()
 const mainStore = useMainStore()
@@ -348,6 +358,11 @@ const updateLayoutType = (type: LayoutType | '') => {
   }
 }
 
+// 打开自动标注对话框
+const openAutoAnnotation = () => {
+  mainStore.setAutoAnnotationState(true)
+}
+
 const close = () => {
   mainStore.setMarkupPanelState(false)
 }
@@ -395,5 +410,43 @@ const close = () => {
   border: 1px dashed #ccc;
   border-radius: $borderRadius;
   margin-top: 5px;
+}
+
+.auto-annotate-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 12px;
+
+  .auto-annotate-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+
+    .icon {
+      font-size: 14px;
+    }
+
+    &:hover {
+      .icon {
+        animation: pulse 0.5s ease-in-out;
+      }
+    }
+  }
+
+  .auto-annotate-tip {
+    font-size: 11px;
+    color: #909399;
+    font-style: italic;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
 }
 </style>
