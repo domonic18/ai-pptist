@@ -47,7 +47,6 @@
           <Divider :margin="10" />
           <PopoverMenuItem class="popover-menu-item" @click="resetSlides(); mainMenuVisible = false"><IconRefresh class="icon" /> 重置幻灯片</PopoverMenuItem>
           <PopoverMenuItem class="popover-menu-item" @click="openMarkupPanel(); mainMenuVisible = false"><IconMark class="icon" /> 幻灯片类型标注</PopoverMenuItem>
-          <PopoverMenuItem class="popover-menu-item" @click="openAutoAnnotation(); mainMenuVisible = false"><IconMark class="icon" /> 自动标注</PopoverMenuItem>
           <PopoverMenuItem class="popover-menu-item" @click="openImageManager()"><IconPicture class="icon" /> 图片资源管理</PopoverMenuItem>
           <PopoverMenuItem class="popover-menu-item" @click="openModelManager()"><IconCode class="icon" /> 模型配置管理</PopoverMenuItem>
           <PopoverMenuItem class="popover-menu-item" @click="mainMenuVisible = false; hotkeyDrawerVisible = true"><IconCommand class="icon" /> 快捷操作</PopoverMenuItem>
