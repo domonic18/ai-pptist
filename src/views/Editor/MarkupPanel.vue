@@ -98,7 +98,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref } from 'vue'
+import { computed, ref, toRaw } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useMainStore, useSlidesStore } from '@/store'
 import type {
@@ -207,7 +207,31 @@ const layoutTypeOptions = ref<{ label: string; value: LayoutType | '' }[]>([
   { label: '思维导图', value: 'mind_map' },
 ])
 
-const slideType = computed(() => currentSlide.value?.type || '')
+const slideType = computed(() => {
+  const slide = currentSlide.value
+  if (!slide) {
+    console.log('MarkupPanel - currentSlide is null')
+    return ''
+  }
+
+  // 使用 toRaw 检查原始数据
+  const rawSlide = toRaw(slide)
+  console.log('MarkupPanel - currentSlide (raw):', {
+    id: rawSlide.id,
+    type: rawSlide.type,
+    slideAnnotation: rawSlide.slideAnnotation
+  })
+
+  // 优先使用 AI 标注的页面类型（slideAnnotation.pageType）
+  const slideAnnotation = slide.slideAnnotation as any
+  const annotatedType = slideAnnotation?.pageType
+
+  console.log(`MarkupPanel - 读取标注: slideId=${slide.id}, pageType=${annotatedType}, hasSlideAnnotation=${!!slideAnnotation}`)
+
+  // 如果没有标注，使用手动设置的页面类型（type）
+  const result = annotatedType || slide.type || ''
+  return result
+})
 const textType = computed(() => {
   if (!handleElement.value) return ''
   if (handleElement.value.type === 'text') {

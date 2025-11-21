@@ -801,6 +801,8 @@ export interface Slide {
   sectionTag?: SectionTag;
   type?: SlideType;
   slideAnnotation?: {
+    // 页面类型标注（AI自动标注结果，可选）
+    pageType?: SlideType;
     // 内容类型标注（可选）
     contentType?: ContentType;
     // 布局类型标注（可选）

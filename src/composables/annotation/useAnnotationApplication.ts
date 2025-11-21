@@ -150,6 +150,14 @@ export function useAnnotationApplication() {
     console.log('当前幻灯片列表:', currentSlides.map(s => ({ id: s.id, type: s.type })))
     console.log('标注结果列表:', annotationResults.results.map(r => ({ slide_id: r.slide_id, page_type: r.page_type })))
 
+    // 检查ID匹配情况
+    const slideIds = new Set(currentSlides.map(s => s.id))
+    const resultIds = annotationResults.results.map(r => r.slide_id)
+    const missingIds = resultIds.filter(id => !slideIds.has(id))
+    if (missingIds.length > 0) {
+      console.warn('以下标注结果的幻灯片ID在当前幻灯片中未找到:', missingIds)
+    }
+
     // 遍历所有幻灯片标注结果
     for (const slideResult of annotationResults.results) {
       try {
@@ -197,39 +205,58 @@ export function useAnnotationApplication() {
     // 准备更新数据
     const updateData: any = {}
 
-    // 1. 应用页面类型
-    if (slideResult.page_type?.type) {
-      const mappedType = TYPE_MAPPINGS.pageType[slideResult.page_type.type] || 'content'
-      updateData.type = mappedType
-    }
-
-    // 2. 应用布局类型和内容类型（存储在slideAnnotation中）
+    // 所有标注信息统一存储在 slideAnnotation 中
     const slideAnnotation: any = {}
 
+    // 1. 应用页面类型到 slideAnnotation.pageType
+    if (slideResult.page_type?.type) {
+      const mappedType = TYPE_MAPPINGS.pageType[slideResult.page_type.type] || 'content'
+      slideAnnotation.pageType = mappedType
+      console.log(`设置 slideAnnotation.pageType: ${mappedType} (${slideResult.page_type.type})`)
+    }
+
+    // 2. 应用布局类型
     if (slideResult.layout_type?.type) {
       slideAnnotation.layoutType = slideResult.layout_type.type
+      console.log(`设置 slideAnnotation.layoutType: ${slideResult.layout_type.type}`)
     }
 
+    // 3. 应用内容类型
     if (slideResult.page_type?.type) {
       slideAnnotation.contentType = TYPE_MAPPINGS.contentType[slideResult.page_type.type] || ''
+      console.log(`设置 slideAnnotation.contentType: ${slideAnnotation.contentType}`)
     }
 
+    // 将标注信息存入 slideAnnotation
     if (Object.keys(slideAnnotation).length > 0) {
       updateData.slideAnnotation = {
         ...(slide.slideAnnotation || {}),
         ...slideAnnotation
       }
+      console.log(`更新幻灯片 ${slide.id} 的 slideAnnotation:`, updateData.slideAnnotation)
     }
 
     // 更新幻灯片
     if (Object.keys(updateData).length > 0) {
-      slidesStore.updateSlide({ ...updateData, slideId: slide.id })
+      console.log(`调用 slidesStore.updateSlide: slideId=${slide.id}`, updateData)
+      // 将 slideId 作为第二个参数传递，而不是放在 props 中
+      slidesStore.updateSlide(updateData, slide.id)
+
+      // 验证更新结果
+      setTimeout(() => {
+        const updatedSlide = slidesStore.slides.find(s => s.id === slide.id)
+        console.log(`验证更新结果 - slideId=${slide.id}:`, {
+          slideAnnotation: updatedSlide?.slideAnnotation,
+          type: updatedSlide?.type
+        })
+      }, 100)
     }
 
-    // 3. 应用元素标注
+    // 4. 应用元素标注
     if (slideResult.element_annotations && slideResult.element_annotations.length > 0) {
+      console.log(`应用 ${slideResult.element_annotations.length} 个元素标注到幻灯片 ${slide.id}`)
       for (const elementAnnotation of slideResult.element_annotations) {
-        await applyElementAnnotation(slide, elementAnnotation, slideIndex)
+        await applyElementAnnotation(slide, elementAnnotation)
       }
     }
   }
@@ -240,12 +267,10 @@ export function useAnnotationApplication() {
    * @private
    * @param slide - 幻灯片
    * @param elementAnnotation - 元素标注数据
-   * @param slideIndex - 幻灯片索引
    */
   const applyElementAnnotation = async (
     slide: SlideData,
-    elementAnnotation: ElementAnnotationResult,
-    slideIndex: number
+    elementAnnotation: ElementAnnotationResult
   ): Promise<void> => {
     const element = slide.elements?.find(
       (el: ElementData) => el.id === elementAnnotation.element_id

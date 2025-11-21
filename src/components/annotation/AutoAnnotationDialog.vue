@@ -403,11 +403,13 @@ const startAnnotation = async () => {
     console.log('[自动标注] 缩略图元素详情:')
     for (let i = 0; i < elements.length; i++) {
       const el = elements[i] as HTMLElement
+      const slide = props.slides[i]
       console.log(`  幻灯片 ${i}:`, {
+        slideId: slide?.id,
+        slideType: slide?.type,
         exists: !!el,
         tagName: el?.tagName,
-        childrenCount: el?.children.length,
-        innerHTML: el?.innerHTML?.substring(0, 200)
+        childrenCount: el?.children.length
       })
     }
 
@@ -422,6 +424,13 @@ const startAnnotation = async () => {
         filenamePrefix: 'annotation-debug'
       }
     )
+
+    // 验证截图和幻灯片的对应关系
+    console.log('[自动标注] 截图与幻灯片对应关系:')
+    screenshots.forEach((screenshot, i) => {
+      const slide = props.slides[i]
+      console.log(`  索引 ${i}: 幻灯片ID=${slide?.id || '未定义'}, 截图有效=${!!(screenshot && screenshot.length > 1000)}, 截图长度=${screenshot?.length || 0}`)
+    })
 
     // 检查有效截图数量
     const validCount = screenshots.filter(s => s && s.length > 1000).length
@@ -484,9 +493,15 @@ const cancelAnnotation = async () => {
 }
 
 const applyResults = () => {
+  // 使用完整的 props.results 而不是截断的 previewResults
+  if (!props.results || !props.results.results) {
+    ElMessage.error('没有可用的完整标注结果')
+    return
+  }
+
   const results: AnnotationResults = {
     taskId: taskId.value,
-    results: previewResults.value,
+    results: props.results.results,  // 使用完整的标注结果
     statistics: {
       total_pages: totalPages.value,
       successful_pages: successCount.value,
@@ -494,6 +509,12 @@ const applyResults = () => {
       average_confidence: averageConfidence.value
     }
   }
+
+  console.log('应用完整标注结果:', {
+    totalSlides: results.results.length,
+    firstSlide: results.results[0]?.slide_id,
+    lastSlide: results.results[results.results.length - 1]?.slide_id
+  })
 
   emit('apply-results', results)
   closeDialog()

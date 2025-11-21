@@ -83,7 +83,7 @@ export function useAnnotation() {
       const requestData = {
         slides: slides.map((slide, index) => ({
           slide_id: slide.id || slide.slideId || `slide-${index}`,
-          screenshot: screenshots[index] || '', 
+          screenshot: screenshots[index] || '',
           elements: slide.elements || [],
           index: slide.index || index
         })),
@@ -99,12 +99,12 @@ export function useAnnotation() {
 
       console.log('发送标注请求到:', API_CONFIG.ANNOTATION.START)
       console.log('请求数据包含的幻灯片数量:', requestData.slides.length)
-      console.log('截图数据有效性检查:', requestData.slides.map((s, i) => ({
-        slide_id: s.slide_id,
-        hasScreenshot: !!s.screenshot,
-        screenshotLength: s.screenshot?.length || 0,
-        isValid: s.screenshot && s.screenshot.length > 1000
-      })))
+
+      // 验证幻灯片ID和截图的对应关系
+      console.log('标注请求 - 幻灯片ID和截图映射:')
+      requestData.slides.forEach((slide, i) => {
+        console.log(`  索引 ${i}: slide_id=${slide.slide_id}, hasScreenshot=${!!slide.screenshot}, screenshotLength=${slide.screenshot?.length || 0}`)
+      })
 
       // 调用API
       const response = await fetch(API_CONFIG.ANNOTATION.START, {

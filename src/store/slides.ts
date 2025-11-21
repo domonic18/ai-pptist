@@ -142,8 +142,33 @@ export const useSlidesStore = defineStore('slides', {
   
     updateSlide(props: Partial<Slide>, slideId?: string) {
       const slideIndex = slideId ? this.slides.findIndex(item => item.id === slideId) : this.slideIndex
+      const oldSlide = this.slides[slideIndex]
+
+      // 确保 slideAnnotation 是响应式对象
+      const updatedSlide: any = {
+        ...oldSlide,
+        ...props,
+        slideAnnotation: props.slideAnnotation
+          ? { ...oldSlide.slideAnnotation, ...props.slideAnnotation }
+          : oldSlide.slideAnnotation
+      }
+
+      console.log(`slidesStore.updateSlide - slideId: ${slideId || this.currentSlide?.id}, 索引: ${slideIndex}`)
+      console.log('旧数据:', { slideAnnotation: oldSlide.slideAnnotation })
+      console.log('更新数据:', { slideAnnotation: props.slideAnnotation })
+      console.log('新数据:', { slideAnnotation: updatedSlide.slideAnnotation })
+
       // 使用 splice 确保响应式更新
-      this.slides.splice(slideIndex, 1, { ...this.slides[slideIndex], ...props })
+      this.slides.splice(slideIndex, 1, updatedSlide)
+
+      // 验证更新结果
+      setTimeout(() => {
+        const verifySlide = this.slides[slideIndex]
+        console.log('验证 store 中的数据:', {
+          slideId: verifySlide.id,
+          slideAnnotation: verifySlide.slideAnnotation
+        })
+      }, 50)
     },
   
     removeSlideProps(data: RemovePropData) {
