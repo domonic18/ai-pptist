@@ -157,6 +157,15 @@ export interface AISourceAnnotation {
 }
 
 /**
+ * 单页标注结果
+ */
+export interface AnnotationResult {
+  success: boolean
+  annotation?: any
+  message?: string
+}
+
+/**
  * 标注应用结果统计
  */
 export interface ApplyAnnotationStats {
