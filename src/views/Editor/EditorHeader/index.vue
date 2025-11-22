@@ -124,20 +124,6 @@
       <ImageManager @insert="handleImageInsert" />
     </el-dialog>
 
-    <AutoAnnotationDialog
-      :visible="autoAnnotationVisible"
-      :slides="currentSlides"
-      :task-id="annotation.taskId.value"
-      :is-processing="annotation.isProcessing.value"
-      :is-completed="annotation.isCompleted.value"
-      :progress="annotation.progress"
-      :results="annotation.results.value"
-      @update:visible="autoAnnotationVisible = $event"
-      @start-annotation="handleStartAnnotation"
-      @cancel-annotation="handleCancelAnnotation"
-      @apply-results="handleApplyResults"
-      @view-details="handleViewDetails"
-    />
 
     <FullscreenSpin :loading="exporting" tip="正在导入..." />
   </div>
@@ -151,9 +137,6 @@ import useScreening from '@/hooks/useScreening'
 import useImport from '@/hooks/useImport'
 import useSlideHandler from '@/hooks/useSlideHandler'
 import useCreateElement from '@/hooks/useCreateElement'
-import { useAnnotation } from '@/composables/useAnnotation'
-import { useAnnotationApplication } from '@/composables/annotation/useAnnotationApplication'
-import { useNotification } from '@/composables/useNotification'
 import type { DialogForExportTypes } from '@/types/export'
 
 import HotkeyDoc from './HotkeyDoc.vue'
@@ -166,98 +149,20 @@ import PopoverMenuItem from '@/components/PopoverMenuItem.vue'
 import Divider from '@/components/Divider.vue'
 import Modal from '@/components/Modal.vue'
 import ImageManager from '@/components/image/ImageManager.vue'
-import AutoAnnotationDialog from '@/components/annotation/AutoAnnotationDialog.vue'
 
 const mainStore = useMainStore()
 const slidesStore = useSlidesStore()
 const { title, slides: currentSlides } = storeToRefs(slidesStore)
-const { showAutoAnnotation } = storeToRefs(mainStore)
 const { enterScreening, enterScreeningFromStart } = useScreening()
 const { importSpecificFile, importPPTXFile, importJSON, exporting } = useImport()
 const { resetSlides } = useSlideHandler()
 const { createImageElement } = useCreateElement()
 
-// 自动标注功能
-const annotation = useAnnotation()
 
-// 监听 showAutoAnnotation 状态变化，打开自动标注对话框
-watch(showAutoAnnotation, (newVal) => {
-  if (newVal) {
-    autoAnnotationVisible.value = true
-  }
-})
-
-// 处理自动标注事件
-const handleStartAnnotation = async (slides: any[], config: any, screenshots?: string[]) => {
-  try {
-    const success = await annotation.startAnnotation(slides, config, screenshots)
-    if (success) {
-      // 启动成功后，对话框会通过进度轮询更新状态
-      console.log('自动标注任务已启动')
-    }
-  } catch (error) {
-    console.error('启动自动标注失败:', error)
-  }
-}
-
-const handleCancelAnnotation = async () => {
-  await annotation.cancelAnnotation()
-}
-
-/**
- * 处理标注结果应用
- *
- * 使用专门的 composable 处理标注结果应用业务逻辑
- */
-const { applyAnnotationResults } = useAnnotationApplication()
-
-/**
- * 通知系统
- */
-const { showSuccess, showError } = useNotification()
-
-/**
- * 标注结果应用事件处理
- */
-const handleApplyResults = async (results: any) => {
-  console.log('应用标注结果:', results)
-
-  if (!results || !results.results || results.results.length === 0) {
-    showError('没有可用的标注结果')
-    return
-  }
-
-  try {
-    // 调用独立的 composable 处理标注结果应用
-    const stats = await applyAnnotationResults(currentSlides.value, results)
-
-    // 显示成功消息
-    const message = `标注结果应用完成：
-- 成功: ${stats.successCount} 页
-- 失败: ${stats.failedCount} 页
-- 标注元素: ${stats.elementCount} 个`
-
-    console.log(message)
-    showSuccess(message, '标注成功')
-
-    // 关闭标注对话框
-    autoAnnotationVisible.value = false
-
-  } catch (error) {
-    console.error('应用标注结果时发生错误:', error)
-    showError('应用标注结果失败，请查看控制台了解详细信息')
-  }
-}
-
-const handleViewDetails = (taskId: string) => {
-  console.log('查看标注详情:', taskId)
-  // TODO: 实现查看详情的逻辑
-}
 
 const mainMenuVisible = ref(false)
 const hotkeyDrawerVisible = ref(false)
 const imageManagerVisible = ref(false)
-const autoAnnotationVisible = ref(false)
 const editingTitle = ref(false)
 const titleValue = ref('')
 const titleInputRef = useTemplateRef<InstanceType<typeof Input>>('titleInputRef')
@@ -301,10 +206,6 @@ const openModelManager = () => {
   mainMenuVisible.value = false
 }
 
-const openAutoAnnotation = () => {
-  autoAnnotationVisible.value = true
-  mainMenuVisible.value = false
-}
 
 const openImageGenerationPage = () => {
   mainStore.setImageGenerationPageState(true)
