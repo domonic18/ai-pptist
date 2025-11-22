@@ -208,11 +208,13 @@ export function useAnnotationApplication() {
     // 所有标注信息统一存储在 slideAnnotation 中
     const slideAnnotation: any = {}
 
-    // 1. 应用页面类型到 slideAnnotation.pageType
-    if (slideResult.page_type?.type) {
+    // 1. 应用页面类型到 slideAnnotation.pageType - 只有当用户没有手动设置页面类型时才应用
+    if (slideResult.page_type?.type && !slide.type) {
       const mappedType = TYPE_MAPPINGS.pageType[slideResult.page_type.type] || 'content'
       slideAnnotation.pageType = mappedType
       console.log(`设置 slideAnnotation.pageType: ${mappedType} (${slideResult.page_type.type})`)
+    } else if (slide.type) {
+      console.log(`跳过 AI 页面类型标注，用户已手动设置类型: ${slide.type}`)
     }
 
     // 2. 应用布局类型
