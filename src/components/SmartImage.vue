@@ -408,7 +408,6 @@ watch(
 <style scoped>
 .smart-image {
   display: inline-block;
-  background-color: #f5f5f5;
 }
 
 .smart-image--rounded {

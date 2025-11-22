@@ -49,25 +49,8 @@ export async function generateScreenshotsFromContainer(
           fontEmbedCSS: ignoreWebfont ? '' : undefined,
           pixelRatio: 1, // 既然 ThumbnailSlide 已经是按照目标尺寸渲染的，这里设为 1
 
-          // 配置 CORS 代理，解决从 COS 加载图片时的跨域问题
-          // 这会绕过浏览器对外部资源的 CORS 限制
-          fetch: async (url: string, init?: RequestInit) => {
-            if (url.startsWith('https://ai-presentation-')) {
-              console.log(`[截图] 使用代理绕过 CORS，加载图片: ${url}`)
-              return await fetch(url, {
-                ...init,
-                mode: 'cors',
-                credentials: 'include'
-              })
-            }
-            return await fetch(url, init)
-          },
-
           // 配置图片缓存策略，避免重复加载
           cacheBust: false,
-
-          // 配置图片加载超时
-          imageTimeout: 30000,
         })
         screenshots.push(dataUrl)
 
