@@ -206,9 +206,9 @@ export function useAutoAnnotation() {
       return defaultModel.id
     }
 
-    // 如果没有找到视觉模型，使用硬编码的默认值（作为后备方案）
-    console.warn('未找到可用的视觉模型，使用默认值')
-    return 'default-vision-model'
+    // 如果没有找到视觉模型，返回空字符串让后端自动选择
+    console.warn('未找到可用的视觉模型，将使用空字符串让后端自动选择')
+    return ''
   }
 
   /**

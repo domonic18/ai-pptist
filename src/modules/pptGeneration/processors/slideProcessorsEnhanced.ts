@@ -38,12 +38,20 @@ export async function processCoverSlide(
 
     // 降级到随机选择
     if (!coverTemplate) {
+      if (coverTemplates.length === 0) {
+        console.error('[Enhanced Processor] 封面模板列表为空，无法选择模板')
+        return null
+      }
       coverTemplate = coverTemplates[Math.floor(Math.random() * coverTemplates.length)]
       console.log('[Enhanced Processor] 使用随机选择的封面模板:', coverTemplate.id)
     }
   }
   catch (error) {
     console.error('[Enhanced Processor] 封面模板选择失败:', error)
+    if (coverTemplates.length === 0) {
+      console.error('[Enhanced Processor] 封面模板列表为空，无法选择模板')
+      return null
+    }
     coverTemplate = coverTemplates[Math.floor(Math.random() * coverTemplates.length)]
   }
 
@@ -95,6 +103,10 @@ export async function processContentsSlide(
     // 降级到容量筛选 + 随机选择
     if (!contentsTemplate) {
       const usableTemplates = getUseableTemplates(contentsTemplates, item.data.items.length, 'item')
+      if (usableTemplates.length === 0) {
+        console.error('[Enhanced Processor] 目录模板列表为空，无法选择模板')
+        return null
+      }
       contentsTemplate = usableTemplates[Math.floor(Math.random() * usableTemplates.length)]
       console.log('[Enhanced Processor] 使用容量筛选+随机选择的目录模板:', contentsTemplate.id)
     }
@@ -102,6 +114,10 @@ export async function processContentsSlide(
   catch (error) {
     console.error('[Enhanced Processor] 目录模板选择失败:', error)
     const usableTemplates = getUseableTemplates(contentsTemplates, item.data.items.length, 'item')
+    if (usableTemplates.length === 0) {
+      console.error('[Enhanced Processor] 目录模板列表为空，无法选择模板')
+      return null
+    }
     contentsTemplate = usableTemplates[Math.floor(Math.random() * usableTemplates.length)]
   }
 
@@ -255,6 +271,10 @@ export async function processContentSlide(
     // 降级到容量筛选 + 随机选择
     if (!contentTemplate) {
       const usableTemplates = getUseableTemplates(contentTemplates, item.data.items.length, 'item')
+      if (usableTemplates.length === 0) {
+        console.error('[Enhanced Processor] 内容模板列表为空，无法选择模板')
+        return null
+      }
       contentTemplate = usableTemplates[Math.floor(Math.random() * usableTemplates.length)]
       console.log('[Enhanced Processor] 使用容量筛选+随机选择的内容模板:', contentTemplate.id)
     }
@@ -262,6 +282,10 @@ export async function processContentSlide(
   catch (error) {
     console.error('[Enhanced Processor] 内容模板选择失败:', error)
     const usableTemplates = getUseableTemplates(contentTemplates, item.data.items.length, 'item')
+    if (usableTemplates.length === 0) {
+      console.error('[Enhanced Processor] 内容模板列表为空，无法选择模板')
+      return null
+    }
     contentTemplate = usableTemplates[Math.floor(Math.random() * usableTemplates.length)]
   }
 
@@ -410,12 +434,20 @@ export async function processEndSlide(
 
     // 降级到随机选择
     if (!endTemplate) {
+      if (endTemplates.length === 0) {
+        console.error('[Enhanced Processor] 结束模板列表为空，无法选择模板')
+        return null
+      }
       endTemplate = endTemplates[Math.floor(Math.random() * endTemplates.length)]
       console.log('[Enhanced Processor] 使用随机选择的结束模板:', endTemplate.id)
     }
   }
   catch (error) {
     console.error('[Enhanced Processor] 结束模板选择失败:', error)
+    if (endTemplates.length === 0) {
+      console.error('[Enhanced Processor] 结束模板列表为空，无法选择模板')
+      return null
+    }
     endTemplate = endTemplates[Math.floor(Math.random() * endTemplates.length)]
   }
 

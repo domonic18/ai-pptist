@@ -63,12 +63,24 @@ export default () => {
   
   // 导出pptist文件（特有 .pptist 后缀文件）
   const exportSpecificFile = (_slides: Slide[]) => {
+    // 处理幻灯片数据，确保标注的页面类型同步到type字段
+    const processedSlides = _slides.map(slide => {
+      // 如果幻灯片有slideAnnotation.pageType但没有type，则同步过去
+      if (slide.slideAnnotation?.pageType && !slide.type) {
+        return {
+          ...slide,
+          type: slide.slideAnnotation.pageType
+        }
+      }
+      return slide
+    })
+
     const json = {
       title: title.value,
       width: viewportSize.value,
       height: viewportSize.value * viewportRatio.value,
       theme: theme.value,
-      slides: _slides,
+      slides: processedSlides,
     }
     const blob = new Blob([encrypt(JSON.stringify(json))], { type: '' })
     saveAs(blob, `${title.value}.pptist`)
@@ -76,12 +88,24 @@ export default () => {
   
   // 导出JSON文件
   const exportJSON = () => {
+    // 处理幻灯片数据，确保标注的页面类型同步到type字段
+    const processedSlides = slides.value.map(slide => {
+      // 如果幻灯片有slideAnnotation.pageType但没有type，则同步过去
+      if (slide.slideAnnotation?.pageType && !slide.type) {
+        return {
+          ...slide,
+          type: slide.slideAnnotation.pageType
+        }
+      }
+      return slide
+    })
+
     const json = {
       title: title.value,
       width: viewportSize.value,
       height: viewportSize.value * viewportRatio.value,
       theme: theme.value,
-      slides: slides.value,
+      slides: processedSlides,
     }
     const blob = new Blob([JSON.stringify(json)], { type: '' })
     saveAs(blob, `${title.value}.json`)

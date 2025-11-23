@@ -61,6 +61,10 @@ export function processContentsSlide(
   imgPool: ImagePoolItem[]
 ): Slide | null {
   const _contentsTemplates = getUseableTemplates(contentsTemplates, item.data.items.length, 'item')
+  if (_contentsTemplates.length === 0) {
+    console.error('[Processor] 目录模板列表为空，无法选择模板')
+    return null
+  }
   const contentsTemplate = _contentsTemplates[Math.floor(Math.random() * _contentsTemplates.length)]
 
   const sortedNumberItems = contentsTemplate.elements.filter(el => checkTextType(el, 'itemNumber'))
@@ -200,6 +204,10 @@ export function processContentSlide(
   imgPool: ImagePoolItem[]
 ): Slide | null {
   const _contentTemplates = getUseableTemplates(contentTemplates, item.data.items.length, 'item')
+  if (_contentTemplates.length === 0) {
+    console.error('[Processor] 内容模板列表为空，无法选择模板')
+    return null
+  }
   const contentTemplate = _contentTemplates[Math.floor(Math.random() * _contentTemplates.length)]
 
   const sortedTitleItemIds = contentTemplate.elements.filter(el => checkTextType(el, 'itemTitle')).sort((a, b) => {
@@ -288,6 +296,10 @@ export function processEndSlide(
   endTemplates: Slide[],
   imgPool: ImagePoolItem[]
 ): Slide | null {
+  if (!endTemplates || endTemplates.length === 0) {
+    console.error('[Processor] 结束模板列表为空，无法选择模板')
+    return null
+  }
   const endTemplate = endTemplates[Math.floor(Math.random() * endTemplates.length)]
   const elements = endTemplate.elements.map(el => {
     if (el.type === 'image' && (el as PPTImageElement).imageType && imgPool.length) {
