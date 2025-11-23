@@ -38,8 +38,10 @@ export const TEXT_ELEMENT_TYPE_MAPPING: Record<string, string> = {
   'slide_title': 'title',
   'item_title': 'itemTitle',
   'content': 'content',
-  'decoration': 'notes',
-  'icon': 'itemNumber'
+  'item': 'item',
+  'icon': 'itemNumber',
+  'itemNumber': 'itemNumber',
+  'partNumber': 'partNumber'
 }
 
 /**
@@ -60,8 +62,10 @@ export const SHAPE_ELEMENT_TYPE_MAPPING: Record<string, string> = {
   'slide_title': 'title',
   'item_title': 'itemTitle',
   'content': 'content',
-  'decoration': 'notes',
-  'icon': 'itemNumber'
+  'item': 'item',
+  'icon': 'itemNumber',
+  'itemNumber': 'itemNumber',
+  'partNumber': 'partNumber'
 }
 
 /**

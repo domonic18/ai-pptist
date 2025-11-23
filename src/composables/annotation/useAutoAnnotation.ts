@@ -11,6 +11,7 @@ import { useModelStore } from '@/store/model'
 import { generateScreenshotsFromContainer } from '@/utils/screenshotHelper'
 import { useAnnotationApplication } from './useAnnotationApplication'
 import type { AnnotationResult } from './types'
+import type { TextType, ImageType } from '@/types/slides'
 
 /**
  * 自动标注功能组合式函数
@@ -406,13 +407,116 @@ export function useAutoAnnotation() {
         console.log('标注已应用到幻灯片:', { slideId: slide.id, slideAnnotation })
       }
 
-      // 4. 应用元素标注（注意：这部分逻辑需要进一步完善）
+      // 4. 应用元素标注
       if (annotation.element_annotations && annotation.element_annotations.length > 0) {
-        console.log(`检测到 ${annotation.element_annotations.length} 个元素标注，待处理`)
-        // TODO: 实现元素标注的应用逻辑
+        console.log(`检测到 ${annotation.element_annotations.length} 个元素标注，开始应用`)
+        await applyElementAnnotations(slide, annotation.element_annotations)
       }
     } catch (error) {
       console.error('应用标注结果失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 应用元素标注到幻灯片元素
+   */
+  const applyElementAnnotations = async (slide: any, elementAnnotations: any[]): Promise<void> => {
+    try {
+      const slidesStore = useSlidesStore()
+
+      // 类型映射配置
+      const TYPE_MAPPINGS = {
+        // AI元素类型 -> 前端文本元素textType
+        textElementType: {
+          'slide_title': 'title',
+          'item_title': 'itemTitle',
+          'content': 'content',
+          'item': 'item',
+          'icon': 'itemNumber',
+          'itemNumber': 'itemNumber',
+          'partNumber': 'partNumber'
+        } as Record<string, string>,
+
+        // AI元素类型 -> 前端图片元素imageType
+        imageElementType: {
+          'decoration': 'background',
+          'content': 'pageFigure',
+          'icon': 'itemFigure'
+        } as Record<string, string>,
+
+        // AI元素类型 -> 前端形状元素text.type（形状包含文本的情况）
+        shapeElementType: {
+          'slide_title': 'title',
+          'item_title': 'itemTitle',
+          'content': 'content',
+          'item': 'item',
+          'icon': 'itemNumber',
+          'itemNumber': 'itemNumber',
+          'partNumber': 'partNumber'
+        } as Record<string, string>
+      }
+
+      let appliedCount = 0
+
+      for (const elementAnnotation of elementAnnotations) {
+        const element = slide.elements?.find(
+          (el: any) => el.id === elementAnnotation.element_id
+        )
+
+        if (!element) {
+          console.warn(
+            `未找到元素: ${elementAnnotation.element_id} in slide ${slide.id}`
+          )
+          continue
+        }
+
+        const elementType = elementAnnotation.type
+
+        // 跳过装饰元素的标注
+        if (elementType === 'decoration') {
+          console.log(`跳过装饰元素标注: ${element.id} (类型: ${element.type})`)
+          continue
+        }
+
+        // 根据元素类型应用不同的映射
+        if (element.type === 'text') {
+          const mappedTextType = TYPE_MAPPINGS.textElementType[elementType] || 'content'
+          slidesStore.updateElement({
+            id: element.id,
+            props: { textType: mappedTextType as TextType },
+            slideId: slide.id
+          })
+          appliedCount++
+          console.log(`应用文本元素标注: ${element.id} -> ${mappedTextType} (AI类型: ${elementType})`)
+        } else if (element.type === 'image') {
+          const mappedImageType = TYPE_MAPPINGS.imageElementType[elementType] || 'pageFigure'
+          slidesStore.updateElement({
+            id: element.id,
+            props: { imageType: mappedImageType as ImageType },
+            slideId: slide.id
+          })
+          appliedCount++
+          console.log(`应用图片元素标注: ${element.id} -> ${mappedImageType} (AI类型: ${elementType})`)
+        } else if (element.type === 'shape' && element.text) {
+          const mappedTextType = TYPE_MAPPINGS.shapeElementType[elementType] || 'content'
+          slidesStore.updateElement({
+            id: element.id,
+            props: {
+              text: { ...element.text, type: mappedTextType as TextType }
+            },
+            slideId: slide.id
+          })
+          appliedCount++
+          console.log(`应用形状元素标注: ${element.id} -> ${mappedTextType} (AI类型: ${elementType})`)
+        } else {
+          console.log(`跳过元素标注: ${element.id} (类型: ${element.type}, AI类型: ${elementType})`)
+        }
+      }
+
+      console.log(`元素标注应用完成: 成功 ${appliedCount}/${elementAnnotations.length} 个元素`)
+    } catch (error) {
+      console.error('应用元素标注失败:', error)
       throw error
     }
   }

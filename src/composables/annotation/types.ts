@@ -124,8 +124,11 @@ export enum ElementType {
   SLIDE_TITLE = 'slide_title',
   ITEM_TITLE = 'item_title',
   CONTENT = 'content',
+  ITEM = 'item',
   DECORATION = 'decoration',
-  ICON = 'icon'
+  ICON = 'icon',
+  ITEM_NUMBER = 'itemNumber',
+  PART_NUMBER = 'partNumber'
 }
 
 /**

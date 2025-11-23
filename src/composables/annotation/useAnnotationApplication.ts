@@ -71,8 +71,10 @@ export function useAnnotationApplication() {
       'slide_title': 'title',
       'item_title': 'itemTitle',
       'content': 'content',
-      'decoration': 'notes',
-      'icon': 'itemNumber'
+      'item': 'item',
+      'icon': 'itemNumber',
+      'itemNumber': 'itemNumber',
+      'partNumber': 'partNumber'
     } as Record<string, string>,
 
     // AI元素类型 -> 前端图片元素imageType
@@ -87,8 +89,10 @@ export function useAnnotationApplication() {
       'slide_title': 'title',
       'item_title': 'itemTitle',
       'content': 'content',
-      'decoration': 'notes',
-      'icon': 'itemNumber'
+      'item': 'item',
+      'icon': 'itemNumber',
+      'itemNumber': 'itemNumber',
+      'partNumber': 'partNumber'
     } as Record<string, string>
   }
 
