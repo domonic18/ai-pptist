@@ -224,7 +224,8 @@ export default defineComponent({
     // Provider选项配置
     const providerOptions = ref([
       { label: 'OpenAI兼容模式', value: 'opencompatible' },
-      { label: 'Gemini', value: 'gemini' }
+      { label: 'Gemini', value: 'gemini' },
+      { label: 'Nano Banana Pro', value: 'nano_banana' }
     ])
 
     const rules = {
@@ -485,7 +486,8 @@ export default defineComponent({
     const getProviderLabel = (provider: string) => {
       const providerMap: Record<string, string> = {
         'opencompatible': 'OpenAI兼容',
-        'gemini': 'Gemini'
+        'gemini': 'Gemini',
+        'nano_banana': 'Nano Banana'
       }
       return providerMap[provider] || provider
     }
@@ -493,7 +495,8 @@ export default defineComponent({
     const getProviderTagType = (provider: string) => {
       const typeMap: Record<string, string> = {
         'opencompatible': 'warning',
-        'gemini': 'success'
+        'gemini': 'success',
+        'nano_banana': 'primary'
       }
       return typeMap[provider] || 'info'
     }

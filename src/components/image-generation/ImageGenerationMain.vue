@@ -91,17 +91,196 @@ const generationForm = ref<GenerationForm>({
   search_enabled: false,
   match_threshold: 0.8,
   confidence_threshold: 0.7,
-  search_limit: 10
+  search_limit: 10,
+  ref_images: [],
+  aspect_ratio: '16:9',
+  resolution: '2K'
 })
 
-// 快速示例提示词
+// 快速示例提示词（PPT场景）
 const quickPrompts = ref([
-  '一个美丽的日落风景，山脉和湖泊',
-  '现代科技风格的办公室环境',
-  '可爱的卡通动物角色',
-  '抽象的几何艺术图案',
-  '古典建筑的内部装饰',
-  '小学数学教育插图，两条平行的直线，清晰简洁的几何图形，白色背景，教育风格，适合六年级学生理解平行线概念。线条笔直整齐，间距均匀，标注平行符号∥，采用明亮的蓝色或红色线条，数学课件配图'
+  {
+    label: 'PPT封面页',
+    text: `你是一位专家级UI/UX演示设计师，专注于生成设计良好的PPT页面。
+
+当前PPT页面的信息如下：
+<page_info>
+页面标题：人工智能技术简史
+
+页面要点：
+副标题：从图灵测试到深度学习
+</page_info>
+
+<ppt_context>
+PPT整体主题：人工智能技术简史
+当前页面位置：第 1 页 / 共 10 页
+</ppt_context>
+
+<design_guidelines>
+- 画面要求：4K分辨率，16:9比例，文字清晰锐利
+- 风格要求：配色和设计语言与提供的模板图片保持严格一致
+- 内容要求：根据页面标题和要点设计最佳构图，不重不漏地渲染所有文本内容
+- 文字要求：避免出现markdown格式符号（如 # 和 * 等）
+- 参考说明：只参考模板的风格设计，禁止出现模板中的文字内容
+- 美化要求：使用适当的装饰性图形或插画填补空白位置
+</design_guidelines>
+
+<output_requirements>
+- 输出一张完整的PPT封面页图片
+- 图片中必须包含页面标题和副标题
+- 文字布局清晰，层次分明
+- 整体风格与模板保持一致
+</output_requirements>`
+  },
+  {
+    label: 'PPT内容页',
+    text: `你是一位专家级UI/UX演示设计师，专注于生成设计良好的PPT页面。
+
+当前PPT页面的信息如下：
+<page_info>
+页面标题：人工智能的发展历程
+
+页面要点：
+- 1950年：图灵测试提出
+- 1956年：人工智能概念诞生
+- 1997年：深蓝击败国际象棋冠军
+- 2016年：AlphaGo战胜围棋冠军
+</page_info>
+
+<ppt_context>
+PPT整体主题：人工智能技术简史
+当前页面位置：第 2 页 / 共 10 页
+</ppt_context>
+
+<design_guidelines>
+- 画面要求：4K分辨率，16:9比例，文字清晰锐利
+- 风格要求：配色和设计语言与提供的模板图片保持严格一致
+- 内容要求：根据页面标题和要点设计最佳构图，不重不漏地渲染所有文本内容
+- 文字要求：避免出现markdown格式符号（如 # 和 * 等）
+- 参考说明：只参考模板的风格设计，禁止出现模板中的文字内容
+- 美化要求：使用适当的装饰性图形或插画填补空白位置
+</design_guidelines>
+
+<output_requirements>
+- 输出一张完整的PPT页面图片
+- 图片中必须包含页面标题和所有要点
+- 文字布局清晰，层次分明
+- 整体风格与模板保持一致
+</output_requirements>`
+  },
+  {
+    label: 'PPT架构图页',
+    text: `你是一位专家级UI/UX演示设计师，专注于生成设计良好的PPT页面。
+
+当前PPT页面的信息如下：
+<page_info>
+页面标题：深度学习技术架构
+
+页面要点：
+- 数据层：数据采集与预处理
+- 特征提取层：卷积神经网络
+- 模型训练层：反向传播算法
+- 推理部署层：模型优化与部署
+</page_info>
+
+<ppt_context>
+PPT整体主题：人工智能技术简史
+当前页面位置：第 5 页 / 共 10 页
+</ppt_context>
+
+<design_guidelines>
+- 画面要求：4K分辨率，16:9比例，文字清晰锐利
+- 风格要求：配色和设计语言与提供的模板图片保持严格一致
+- 内容要求：根据页面标题和要点设计最佳构图，不重不漏地渲染所有文本内容
+- 文字要求：避免出现markdown格式符号（如 # 和 * 等）
+- 参考说明：只参考模板的风格设计，禁止出现模板中的文字内容
+- 美化要求：使用适当的装饰性图形或插画填补空白位置，使用箭头或连线展示层次关系
+</design_guidelines>
+
+<output_requirements>
+- 输出一张完整的PPT页面图片
+- 图片中必须包含页面标题和所有要点
+- 文字布局清晰，层次分明，体现技术架构的层次关系
+- 整体风格与模板保持一致
+</output_requirements>`
+  },
+  {
+    label: 'PPT对比页',
+    text: `你是一位专家级UI/UX演示设计师，专注于生成设计良好的PPT页面。
+
+当前PPT页面的信息如下：
+<page_info>
+页面标题：传统AI与现代AI对比
+
+页面要点：
+传统AI：
+- 基于规则的系统
+- 专家系统
+- 符号推理
+
+现代AI：
+- 神经网络
+- 深度学习
+- 端到端学习
+</page_info>
+
+<ppt_context>
+PPT整体主题：人工智能技术简史
+当前页面位置：第 7 页 / 共 10 页
+</ppt_context>
+
+<design_guidelines>
+- 画面要求：4K分辨率，16:9比例，文字清晰锐利
+- 风格要求：配色和设计语言与提供的模板图片保持严格一致
+- 内容要求：根据页面标题和要点设计最佳构图，不重不漏地渲染所有文本内容
+- 文字要求：避免出现markdown格式符号（如 # 和 * 等）
+- 参考说明：只参考模板的风格设计，禁止出现模板中的文字内容
+- 美化要求：使用左右对比布局，通过不同配色或图标区分两侧内容
+</design_guidelines>
+
+<output_requirements>
+- 输出一张完整的PPT页面图片
+- 图片中必须包含页面标题和所有要点
+- 文字布局清晰，左右对比明确
+- 整体风格与模板保持一致
+</output_requirements>`
+  },
+  {
+    label: 'PPT总结页',
+    text: `你是一位专家级UI/UX演示设计师，专注于生成设计良好的PPT页面。
+
+当前PPT页面的信息如下：
+<page_info>
+页面标题：关键要点总结
+
+页面要点：
+- AI技术正在改变各行各业
+- 技术演进速度持续加快
+- 需要重视AI伦理与安全问题
+- 人机协作将成为未来趋势
+</page_info>
+
+<ppt_context>
+PPT整体主题：人工智能技术简史
+当前页面位置：第 10 页 / 共 10 页
+</ppt_context>
+
+<design_guidelines>
+- 画面要求：4K分辨率，16:9比例，文字清晰锐利
+- 风格要求：配色和设计语言与提供的模板图片保持严格一致
+- 内容要求：根据页面标题和要点设计最佳构图，不重不漏地渲染所有文本内容
+- 文字要求：避免出现markdown格式符号（如 # 和 * 等）
+- 参考说明：只参考模板的风格设计，禁止出现模板中的文字内容
+- 美化要求：突出关键要点，使用视觉元素强化总结性内容
+</design_guidelines>
+
+<output_requirements>
+- 输出一张完整的PPT总结页图片
+- 图片中必须包含页面标题和所有要点
+- 文字布局清晰，重点突出
+- 整体风格与模板保持一致
+</output_requirements>`
+  }
 ])
 
 // 方法
@@ -109,8 +288,13 @@ const goBackToMain = () => {
   mainStore.setImageGenerationPageState(false)
 }
 
-const selectPrompt = (prompt: string) => {
-  generationForm.value.prompt = prompt
+const selectPrompt = (prompt: string | { label: string; text: string }) => {
+  if (typeof prompt === 'string') {
+    generationForm.value.prompt = prompt
+  }
+  else {
+    generationForm.value.prompt = prompt.text
+  }
 }
 
 const addLog = (level: LogEntry['level'], message: string) => {

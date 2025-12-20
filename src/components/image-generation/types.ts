@@ -13,6 +13,9 @@ export interface GenerationForm {
   match_threshold: number
   confidence_threshold: number
   search_limit: number
+  ref_images?: string[] // 参考图片列表（base64或URL）
+  aspect_ratio?: string // 图片比例（如 "16:9"）
+  resolution?: string // 分辨率（如 "2K"）
 }
 
 export interface ModelInfo {

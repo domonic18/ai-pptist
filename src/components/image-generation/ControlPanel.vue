@@ -87,6 +87,39 @@
           />
         </div>
 
+        <!-- 参考图上传区域 -->
+        <div class="form-item compact ref-images-section">
+          <label class="form-label">
+            参考图片（可选）
+            <el-tooltip placement="top" effect="light">
+              <template #content>
+                <div style="max-width: 300px;">
+                  <p><strong>Nano Banana Pro 模型支持：</strong></p>
+                  <p>上传参考图片，AI将参考其风格和构图生成新图片</p>
+                  <p>• 支持上传1-3张参考图</p>
+                  <p>• 适合PPT模板风格复用</p>
+                </div>
+              </template>
+              <el-icon class="info-icon"><QuestionFilled /></el-icon>
+            </el-tooltip>
+          </label>
+          <div class="ref-images-upload">
+            <el-upload
+              v-model:file-list="refImagesList"
+              :auto-upload="false"
+              :limit="3"
+              :on-change="handleRefImageChange"
+              :on-remove="handleRefImageRemove"
+              list-type="picture-card"
+              accept="image/*"
+              :disabled="loading"
+            >
+              <el-icon><Plus /></el-icon>
+            </el-upload>
+            <div class="upload-tip">最多上传3张参考图，支持 JPG、PNG 格式</div>
+          </div>
+        </div>
+
         <!-- 快速示例 -->
         <div class="quick-prompts compact">
           <span class="quick-label">快速示例：</span>
@@ -99,7 +132,7 @@
               :disabled="loading"
               class="prompt-btn"
             >
-              {{ prompt }}
+              {{ typeof prompt === 'string' ? prompt : prompt.label }}
             </el-button>
           </div>
         </div>
@@ -128,25 +161,30 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { MagicStick, Upload } from '@element-plus/icons-vue'
+import { computed, ref } from 'vue'
+import { MagicStick, Upload, Plus, QuestionFilled } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import type { UploadFile, UploadUserFile } from 'element-plus'
 import type { GenerationForm, ModelInfo } from './types'
 
 interface Props {
   form: GenerationForm
   availableModels: ModelInfo[]
   loading: boolean
-  quickPrompts: string[]
+  quickPrompts: (string | { label: string; text: string })[]
 }
 
 interface Emits {
   (e: 'update:form', value: GenerationForm): void
-  (e: 'selectPrompt', prompt: string): void
+  (e: 'selectPrompt', prompt: string | { label: string; text: string }): void
   (e: 'generate'): void
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
+
+// 参考图片列表
+const refImagesList = ref<UploadUserFile[]>([])
 
 const form = computed({
   get: () => props.form,
@@ -168,6 +206,73 @@ const imageSize = computed({
 const canGenerate = computed(() =>
   props.form.prompt.trim() && props.form.generation_model
 )
+
+/**
+ * 将文件转换为base64
+ */
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+/**
+ * 处理参考图片上传变化
+ */
+const handleRefImageChange = async (uploadFile: UploadFile) => {
+  try {
+    if (!uploadFile.raw) return
+    
+    // 验证文件大小（限制5MB）
+    const maxSize = 5 * 1024 * 1024
+    if (uploadFile.raw.size > maxSize) {
+      ElMessage.warning('图片大小不能超过5MB')
+      // 移除超大文件
+      const index = refImagesList.value.findIndex(f => f.uid === uploadFile.uid)
+      if (index !== -1) {
+        refImagesList.value.splice(index, 1)
+      }
+      return
+    }
+    
+    // 转换为base64
+    const base64 = await fileToBase64(uploadFile.raw)
+    
+    // 更新表单数据
+    const currentRefImages = props.form.ref_images || []
+    emit('update:form', {
+      ...props.form,
+      ref_images: [...currentRefImages, base64]
+    })
+    
+    ElMessage.success('参考图片添加成功')
+  } catch (error) {
+    console.error('处理参考图片失败:', error)
+    ElMessage.error('处理参考图片失败')
+  }
+}
+
+/**
+ * 处理参考图片移除
+ */
+const handleRefImageRemove = (uploadFile: UploadFile) => {
+  // 找到移除的图片索引
+  const index = refImagesList.value.findIndex(f => f.uid === uploadFile.uid)
+  
+  if (index !== -1 && props.form.ref_images) {
+    // 移除对应的base64数据
+    const newRefImages = [...props.form.ref_images]
+    newRefImages.splice(index, 1)
+    
+    emit('update:form', {
+      ...props.form,
+      ref_images: newRefImages.length > 0 ? newRefImages : undefined
+    })
+  }
+}
 </script>
 
 <style scoped lang="scss">
@@ -194,6 +299,22 @@ const canGenerate = computed(() =>
 
   .control-content {
     &.compact {
+      .form-item {
+        margin-bottom: 12px;
+
+        .form-label {
+          display: block;
+          margin-bottom: 6px;
+          font-size: 13px;
+          font-weight: 500;
+          color: #606266;
+        }
+
+        &.compact {
+          margin-bottom: 0;
+        }
+      }
+
       .control-grid {
         display: grid;
         grid-template-columns: 1fr 2fr;
@@ -234,8 +355,53 @@ const canGenerate = computed(() =>
   .prompt-section {
     margin-top: 16px;
 
+    .ref-images-section {
+      margin-top: 12px;
+
+      .form-label {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+
+        .info-icon {
+          color: #909399;
+          font-size: 14px;
+          cursor: help;
+
+          &:hover {
+            color: #409eff;
+          }
+        }
+      }
+
+      .ref-images-upload {
+        .upload-tip {
+          margin-top: 8px;
+          font-size: 12px;
+          color: #909399;
+        }
+
+        :deep(.el-upload-list) {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        :deep(.el-upload--picture-card) {
+          width: 100px;
+          height: 100px;
+          line-height: 100px;
+        }
+
+        :deep(.el-upload-list__item) {
+          width: 100px;
+          height: 100px;
+        }
+      }
+    }
+
     .quick-prompts {
-      margin-top: 8px;
+      margin-top: 12px;
       display: flex;
       align-items: center;
       gap: 8px;
