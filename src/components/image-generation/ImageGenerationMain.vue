@@ -453,7 +453,6 @@ const handleStoreImage = async (image: GeneratedImage) => {
     }
   }
   catch (error: any) {
-    console.error('图片入库失败:', error)
     addLog('error', `请求失败: ${error.response?.data?.message || error.message}`)
     ElMessage.error(error.response?.data?.message || '图片入库失败')
   }
@@ -466,40 +465,13 @@ const handleDeleteImage = (image: GeneratedImage) => {
   ElMessage.success('图片已删除')
 }
 
-const handleImageLoad = (image: GeneratedImage) => {
+const handleImageLoad = () => {
   addLog('success', '图片加载成功')
 }
 
-const handleImageError = (image: GeneratedImage) => {
+const handleImageError = () => {
   addLog('error', '图片加载失败')
   ElMessage.error('图片加载失败')
-}
-
-// 工具方法
-const getStatusType = (status: string) => {
-  switch (status) {
-    case 'generating':
-      return 'warning'
-    case 'success':
-      return 'success'
-    case 'error':
-      return 'danger'
-    default:
-      return 'info'
-  }
-}
-
-const getStatusText = (status: string) => {
-  switch (status) {
-    case 'generating':
-      return '生成中'
-    case 'success':
-      return '成功'
-    case 'error':
-      return '失败'
-    default:
-      return '未知'
-  }
 }
 
 const loadModels = async () => {
