@@ -1,40 +1,52 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import apiService from '../services'
+import type { ModelCapability, ProviderMapping } from '../types/ai-model'
 
 export interface ModelData {
   id: string
   name: string
-  type: 'text' | 'image'
-  provider: string
-  baseUrl: string
-  apiKey: string
   modelName: string
-  parameters: string
-  maxTokens: string
+  baseUrl: string
+  apiKey?: string
+  capabilities: ModelCapability[]
+  provider_mapping: ProviderMapping
+  maxTokens?: number
+  contextWindow?: number
   isEnabled: boolean
   isDefault: boolean
-  supportsVision: boolean
-  createTime: string
+  
+  // 向后兼容旧字段
+  type?: 'text' | 'image'
+  provider?: string
+  parameters?: string
+  supportsVision?: boolean
+  createTime?: string
 }
 
 interface BackendModelData {
   id: string
   name: string
-  provider: string
+  ai_model_name: string
   base_url?: string
   api_key?: string
-  ai_model_name?: string
-  parameters?: string
-  max_tokens?: string
+  capabilities: string[]
+  provider_mapping: Record<string, string>
+  parameters?: Record<string, any>
+  max_tokens?: number
+  context_window?: number
   is_enabled: boolean
   is_default: boolean
+  
+  // 旧字段（向后兼容）
+  provider?: string
   supports_image_generation?: boolean
   supports_chat?: boolean
   supports_embeddings?: boolean
   supports_vision?: boolean
   supports_tools?: boolean
   created_at?: string
+  updated_at?: string
 }
 
 export const useModelStore = defineStore('model', () => {
@@ -45,95 +57,66 @@ export const useModelStore = defineStore('model', () => {
     models.value = backendModels.map((model: BackendModelData) => ({
       id: model.id,
       name: model.name,
-      type: model.supports_image_generation ? 'image' : 'text', // Use supports_image_generation field to determine type
-      provider: model.provider,
-      baseUrl: model.base_url || '',
-      apiKey: model.api_key || '',
       modelName: model.ai_model_name || '',
-      parameters: model.parameters || '',
-      maxTokens: model.max_tokens || '8192',
+      baseUrl: model.base_url || '',
+      capabilities: (model.capabilities || []) as ModelCapability[],
+      provider_mapping: (model.provider_mapping || {}) as ProviderMapping,
+      maxTokens: model.max_tokens,
+      contextWindow: model.context_window,
       isEnabled: model.is_enabled,
       isDefault: model.is_default,
-      supportsVision: model.supports_vision || false,
+      
+      // 向后兼容：从旧字段推导
+      type: model.supports_image_generation ? 'image' : 'text',
+      provider: model.provider,
       createTime: model.created_at || new Date().toISOString()
     }))
   }
 
-  const addModel = async (model: ModelData) => {
+  const addModel = async (model: any) => {
     // Convert to backend format
     const backendModel = {
       name: model.name,
-      provider: model.provider,
-      base_url: model.baseUrl,
-      api_key: model.apiKey,
-      ai_model_name: model.modelName,
-      parameters: model.parameters,
-      max_tokens: model.maxTokens,
-      is_enabled: model.isEnabled,
-      is_default: model.isDefault,
-      // Convert frontend type to backend capability fields
-      supports_image_generation: model.type === 'image',
-      supports_chat: model.type === 'text',
-      supports_embeddings: false,
-      supports_vision: model.supportsVision,
-      supports_tools: false
+      ai_model_name: model.ai_model_name || model.modelName,
+      base_url: model.base_url || model.baseUrl,
+      api_key: model.api_key || model.apiKey,
+      capabilities: model.capabilities || [],
+      provider_mapping: model.provider_mapping || {},
+      parameters: model.parameters || {},
+      max_tokens: model.max_tokens || model.maxTokens,
+      context_window: model.context_window || model.contextWindow,
+      is_enabled: model.is_enabled !== undefined ? model.is_enabled : model.isEnabled,
+      is_default: model.is_default !== undefined ? model.is_default : model.isDefault
     }
 
     // Call backend API to create model
     const createdModel = await apiService.createAIModel(backendModel)
 
-    // Add to local store with backend ID
-    const newModel: ModelData = {
-      id: createdModel.id,
-      name: createdModel.name,
-      type: createdModel.supports_image_generation ? 'image' : 'text',
-      provider: createdModel.provider,
-      baseUrl: createdModel.base_url || '',
-      apiKey: createdModel.api_key || '',
-      modelName: createdModel.ai_model_name || '',
-      parameters: createdModel.parameters || '',
-      maxTokens: createdModel.max_tokens || '8192',
-      isEnabled: createdModel.is_enabled,
-      isDefault: createdModel.is_default,
-      supportsVision: createdModel.supports_vision || false,
-      createTime: createdModel.created_at || new Date().toISOString()
-    }
-
-    models.value.push(newModel)
+    // Reload models to get fresh data
+    await loadModels()
   }
 
-  const updateModel = async (updatedModel: ModelData) => {
-    // 获取当前模型的详细信息，以保留原有的能力配置
-    const currentModelDetail = await apiService.getAIModelDetail(updatedModel.id)
-
+  const updateModel = async (updatedModel: any) => {
     // Convert to backend format
     const backendModel = {
       name: updatedModel.name,
-      provider: updatedModel.provider,
-      base_url: updatedModel.baseUrl,
-      api_key: updatedModel.apiKey,
-      ai_model_name: updatedModel.modelName,
-      parameters: updatedModel.parameters,
-      max_tokens: updatedModel.maxTokens,
-      is_enabled: updatedModel.isEnabled,
-      is_default: updatedModel.isDefault,
-      // 保留原有的能力配置，只更新类型相关的字段
-      supports_image_generation: updatedModel.type === 'image',
-      supports_chat: updatedModel.type === 'text',
-      // 保留其他能力配置
-      supports_embeddings: currentModelDetail.supports_embeddings || false,
-      supports_vision: updatedModel.supportsVision,
-      supports_tools: currentModelDetail.supports_tools || false
+      ai_model_name: updatedModel.ai_model_name || updatedModel.modelName,
+      base_url: updatedModel.base_url || updatedModel.baseUrl,
+      api_key: updatedModel.api_key || updatedModel.apiKey,
+      capabilities: updatedModel.capabilities || [],
+      provider_mapping: updatedModel.provider_mapping || {},
+      parameters: updatedModel.parameters || {},
+      max_tokens: updatedModel.max_tokens || updatedModel.maxTokens,
+      context_window: updatedModel.context_window || updatedModel.contextWindow,
+      is_enabled: updatedModel.is_enabled !== undefined ? updatedModel.is_enabled : updatedModel.isEnabled,
+      is_default: updatedModel.is_default !== undefined ? updatedModel.is_default : updatedModel.isDefault
     }
 
     // Call backend API to update model
-    await apiService.updateAIModel(updatedModel.id, backendModel)
+    await apiService.updateAIModel(updatedModel.id || updatedModel.id, backendModel)
 
-    // Update local store
-    const index = models.value.findIndex(model => model.id === updatedModel.id)
-    if (index !== -1) {
-      models.value[index] = updatedModel
-    }
+    // Reload models to get fresh data
+    await loadModels()
   }
 
   const deleteModel = async (id: string) => {
@@ -152,7 +135,16 @@ export const useModelStore = defineStore('model', () => {
   }
 
   const getModelsByType = (type: 'text' | 'image') => {
-    return models.value.filter(model => model.type === type)
+    return models.value.filter(model => {
+      // 新架构：基于 capabilities
+      if (type === 'text') {
+        return model.capabilities.includes('chat') || model.capabilities.includes('vision')
+      } else if (type === 'image') {
+        return model.capabilities.includes('image_gen')
+      }
+      // 向后兼容：使用 type 字段
+      return model.type === type
+    })
   }
 
   return {

@@ -32,11 +32,18 @@
   <div class="px-6 py-4">
     <el-table :data="filteredModels.data" style="width: 100%" v-loading="loading">
       <el-table-column prop="name" label="模型名称" />
-      <el-table-column prop="type" label="模型类型">
+      <el-table-column prop="capabilities" label="模型能力" width="250">
         <template #default="{ row }">
-          <el-tag :type="row.type === 'text' ? 'primary' : 'success'">
-            {{ row.type === 'text' ? '文本模型' : '文生图模型' }}
-          </el-tag>
+          <div class="flex flex-wrap gap-1">
+            <el-tag 
+              v-for="capability in row.capabilities" 
+              :key="capability"
+              :type="getCapabilityType(capability)"
+              size="small"
+            >
+              {{ getCapabilityLabel(capability) }}
+            </el-tag>
+          </div>
         </template>
       </el-table-column>
       <el-table-column prop="provider" label="Provider" width="120">
@@ -103,31 +110,47 @@
         <el-form-item label="显示名称" prop="name">
           <el-input v-model="modelForm.name" placeholder="请输入模型显示名称，该名称用于在下拉列表中显示" />
         </el-form-item>
-        <el-form-item label="模型类型" prop="type">
-          <el-select
-            v-model="modelForm.type"
-            placeholder="请选择模型类型"
-            teleported
-            popper-class="model-type-dropdown"
-            @change="handleTypeChange"
-          >
-            <el-option label="文本模型" value="text" />
-            <el-option label="文生图模型" value="image" />
-          </el-select>
+        
+        <!-- 能力选择 -->
+        <el-form-item label="模型能力" prop="capabilities">
+          <el-checkbox-group v-model="modelForm.capabilities" @change="handleCapabilitiesChange">
+            <el-checkbox 
+              v-for="capability in availableCapabilities" 
+              :key="capability.value"
+              :label="capability.value"
+            >
+              <el-tooltip :content="capability.description" placement="top">
+                <span>{{ capability.label }}</span>
+              </el-tooltip>
+            </el-checkbox>
+          </el-checkbox-group>
+          <div class="text-sm text-gray-500 mt-2">
+            选择模型支持的能力，至少选择一项
+          </div>
         </el-form-item>
-        <el-form-item label="Provider" prop="provider">
+
+        <!-- Provider配置 -->
+        <el-form-item 
+          v-for="capability in modelForm.capabilities" 
+          :key="capability"
+          :label="`${getCapabilityLabel(capability)} Provider`"
+          :prop="`provider_mapping.${capability}`"
+        >
           <el-select
-            v-model="modelForm.provider"
+            v-model="modelForm.provider_mapping[capability]"
             placeholder="请选择Provider"
             teleported
             popper-class="provider-dropdown"
           >
             <el-option
-              v-for="provider in providerOptions"
+              v-for="provider in getProvidersForCapability(capability)"
               :key="provider.value"
               :label="provider.label"
               :value="provider.value"
-            />
+            >
+              <span>{{ provider.label }}</span>
+              <span class="text-xs text-gray-400 ml-2">{{ provider.description }}</span>
+            </el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="Base URL" prop="baseUrl">
@@ -160,19 +183,12 @@
         <el-form-item label="设为默认" prop="isDefault">
           <el-switch v-model="modelForm.isDefault" />
         </el-form-item>
-        <el-form-item label="是否支持视觉" prop="supportsVision">
-          <el-switch v-model="modelForm.supportsVision" />
-          <template #label>
-            <span class="flex items-center" style="width: 120px;">
-              是否支持视觉
-              <el-tooltip
-                content="该模型是否支持多模态视觉功能（如图片识别、分析等）"
-                placement="top"
-              >
-                <el-icon class="ml-1 cursor-help"><QuestionFilled /></el-icon>
-              </el-tooltip>
-            </span>
-          </template>
+        <el-form-item label="上下文窗口" prop="contextWindow">
+          <el-input
+            v-model="modelForm.contextWindow"
+            placeholder="上下文窗口大小（可选）"
+            type="number"
+          />
         </el-form-item>
       </el-form>
     </div>
@@ -187,11 +203,20 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, onMounted, nextTick } from 'vue'
+import { defineComponent, ref, computed, onMounted, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Plus, Edit, Delete, CopyDocument, QuestionFilled } from '@element-plus/icons-vue'
-import { useModelStore, type ModelData } from '../../store/model'
+import { useModelStore } from '../../store/model'
 import apiService from '../../services'
+import {
+  type ModelCapability,
+  type ProviderMapping,
+  CAPABILITY_CONFIGS,
+  getProviderOptionsForCapability,
+  getCapabilityConfig,
+  getProviderLabel as getProviderLabelUtil,
+  getProviderTagType as getProviderTagTypeUtil
+} from '../../types/ai-model'
 
 export default defineComponent({
   name: 'ModelManagement',
@@ -205,33 +230,48 @@ export default defineComponent({
     const pageSize = ref(10)
     const total = ref(0)
 
-    const modelForm = ref<ModelData>({
+    interface ModelFormData {
+      id?: string
+      name: string
+      modelName: string
+      baseUrl: string
+      apiKey: string
+      capabilities: ModelCapability[]
+      provider_mapping: ProviderMapping
+      maxTokens: string
+      contextWindow?: string
+      isEnabled: boolean
+      isDefault: boolean
+    }
+
+    const modelForm = reactive<ModelFormData>({
       id: '',
       name: '',
-      type: 'text',
-      provider: 'opencompatible',
+      modelName: '',
       baseUrl: '',
       apiKey: '',
-      modelName: '',
-      parameters: '',
+      capabilities: [],
+      provider_mapping: {},
       maxTokens: '8192',
+      contextWindow: '',
       isEnabled: true,
-      isDefault: false,
-      supportsVision: false,
-      createTime: ''
-    } as ModelData)
+      isDefault: false
+    })
 
-    // Provider选项配置
-    const providerOptions = ref([
-      { label: 'OpenAI兼容模式', value: 'opencompatible' },
-      { label: 'Gemini', value: 'gemini' },
-      { label: 'Nano Banana Pro', value: 'nano_banana' }
-    ])
+    // 可用的能力选项
+    const availableCapabilities = CAPABILITY_CONFIGS
 
     const rules = {
       name: [{ required: true, message: '请输入模型名称', trigger: 'blur' }],
-      type: [{ required: true, message: '请选择模型类型', trigger: 'change' }],
-      provider: [{ required: true, message: '请选择Provider', trigger: 'change' }],
+      capabilities: [
+        { 
+          required: true, 
+          message: '请至少选择一个模型能力', 
+          trigger: 'change',
+          type: 'array',
+          min: 1
+        }
+      ],
       baseUrl: [
         { required: true, message: '请输入模型服务基础地址', trigger: 'blur' },
         {
@@ -269,6 +309,41 @@ export default defineComponent({
     const formRef = ref()
     const modelStore = useModelStore()
 
+    // 能力相关辅助函数
+    const getCapabilityLabel = (capability: ModelCapability): string => {
+      const config = getCapabilityConfig(capability)
+      return config?.label || capability
+    }
+
+    const getCapabilityType = (capability: ModelCapability) => {
+      const config = getCapabilityConfig(capability)
+      return config?.type || 'info'
+    }
+
+    const getProvidersForCapability = (capability: ModelCapability) => {
+      return getProviderOptionsForCapability(capability)
+    }
+
+    // 处理能力变更
+    const handleCapabilitiesChange = (capabilities: ModelCapability[]) => {
+      // 清理不再选中的能力的Provider配置
+      Object.keys(modelForm.provider_mapping).forEach(key => {
+        if (!capabilities.includes(key as ModelCapability)) {
+          delete modelForm.provider_mapping[key as ModelCapability]
+        }
+      })
+
+      // 为新选中的能力设置默认Provider
+      capabilities.forEach(capability => {
+        if (!modelForm.provider_mapping[capability]) {
+          const providers = getProviderOptionsForCapability(capability)
+          if (providers.length > 0) {
+            modelForm.provider_mapping[capability] = providers[0].value
+          }
+        }
+      })
+    }
+
     const filteredModels = computed(() => {
       let filtered = modelStore.models
 
@@ -279,7 +354,17 @@ export default defineComponent({
       }
 
       if (activeTab.value !== 'all') {
-        filtered = filtered.filter(model => model.type === activeTab.value)
+        // 新架构：根据capabilities筛选
+        filtered = filtered.filter(model => {
+          if (activeTab.value === 'text') {
+            return model.capabilities?.includes('chat' as ModelCapability) || 
+                   model.capabilities?.includes('vision' as ModelCapability)
+          }
+          else if (activeTab.value === 'image') {
+            return model.capabilities?.includes('image_gen' as ModelCapability)
+          }
+          return true
+        })
       }
 
       const start = (currentPage.value - 1) * pageSize.value
@@ -300,80 +385,70 @@ export default defineComponent({
           // 获取完整的模型详情（包含API密钥等敏感信息）
           const modelDetail = await apiService.getAIModelDetail(row.id)
 
-          modelForm.value = {
+          // 使用新架构
+          Object.assign(modelForm, {
             id: modelDetail.id,
             name: modelDetail.name,
-            type: modelDetail.supports_image_generation ? 'image' : 'text', // Use supports_image_generation field
-            provider: modelDetail.provider || 'opencompatible',
+            modelName: modelDetail.ai_model_name || '',
             baseUrl: modelDetail.base_url || '',
             apiKey: modelDetail.api_key || '',
-            modelName: modelDetail.ai_model_name || '',
-            parameters: modelDetail.parameters || '',
-            maxTokens: modelDetail.max_tokens || '8192',
+            capabilities: modelDetail.capabilities || [],
+            provider_mapping: modelDetail.provider_mapping || {},
+            maxTokens: modelDetail.max_tokens?.toString() || '8192',
+            contextWindow: modelDetail.context_window?.toString() || '',
             isEnabled: modelDetail.is_enabled,
-            isDefault: modelDetail.is_default,
-            supportsVision: modelDetail.supports_vision || false,
-            createTime: modelDetail.created_at || new Date().toISOString()
-          } as ModelData
+            isDefault: modelDetail.is_default
+          })
         }
         catch (error) {
-          console.error('获取模型详情失败:', error)
-          // 如果获取详情失败，确保使用正确的类型
-          // 优先使用row中的type，如果不存在则根据supports_image_generation判断
-          const modelType = row.type || (row.supports_image_generation ? 'image' : 'text')
-
-          modelForm.value = {
+          // 获取模型详情失败
+          // 如果获取详情失败，使用列表数据
+          Object.assign(modelForm, {
             id: row.id,
             name: row.name,
-            type: modelType,
-            provider: row.provider || 'opencompatible',
-            baseUrl: row.baseUrl,
-            apiKey: row.apiKey || '', // 使用空字符串作为默认值
-            modelName: row.modelName,
-            parameters: row.parameters,
-            maxTokens: row.maxTokens,
+            modelName: row.modelName || '',
+            baseUrl: row.baseUrl || '',
+            apiKey: '', // API密钥需要重新输入
+            capabilities: row.capabilities || [],
+            provider_mapping: row.provider_mapping || {},
+            maxTokens: row.maxTokens?.toString() || '8192',
+            contextWindow: row.contextWindow?.toString() || '',
             isEnabled: row.isEnabled,
-            isDefault: row.isDefault,
-            supportsVision: row.supportsVision || false,
-            createTime: row.createTime
-          } as ModelData
+            isDefault: row.isDefault
+          })
         }
       }
       else if (type === 'add' && row) {
         // 复制功能：使用传入的row数据填充表单
-        modelForm.value = {
+        Object.assign(modelForm, {
           id: '',
-          name: row.name,
-          type: row.type,
-          provider: row.provider || 'opencompatible',
-          baseUrl: row.baseUrl,
+          name: `${row.name} - 副本`,
+          modelName: row.modelName || '',
+          baseUrl: row.baseUrl || '',
           apiKey: row.apiKey || '',
-          modelName: row.modelName,
-          parameters: row.parameters,
-          maxTokens: row.maxTokens,
+          capabilities: [...(row.capabilities || [])],
+          provider_mapping: { ...(row.provider_mapping || {}) },
+          maxTokens: row.maxTokens?.toString() || '8192',
+          contextWindow: row.contextWindow?.toString() || '',
           isEnabled: row.isEnabled,
-          isDefault: false, // 复制时默认不设为默认模型
-          supportsVision: row.supportsVision || false,
-          createTime: ''
-        } as ModelData
+          isDefault: false // 复制时默认不设为默认模型
+        })
       }
       else {
         // 完全新增：使用空表单
-        modelForm.value = {
+        Object.assign(modelForm, {
           id: '',
           name: '',
-          type: 'text',
-          provider: 'opencompatible',
+          modelName: '',
           baseUrl: '',
           apiKey: '',
-          modelName: '',
-          parameters: '',
+          capabilities: [],
+          provider_mapping: {},
           maxTokens: '8192',
+          contextWindow: '',
           isEnabled: true,
-          isDefault: false,
-          supportsVision: false,
-          createTime: ''
-        } as ModelData
+          isDefault: false
+        })
       }
     }
 
@@ -382,24 +457,41 @@ export default defineComponent({
 
       await formRef.value.validate((valid: boolean) => {
         if (valid) {
-          // Trim whitespace from base_url and api_key fields
-          const sanitizedData = {
-            ...modelForm.value,
-            baseUrl: modelForm.value.baseUrl?.trim() || '',
-            apiKey: modelForm.value.apiKey?.trim() || '',
-            type: modelForm.value.type as 'text' | 'image'
+          // 验证至少选择了一个能力
+          if (!modelForm.capabilities || modelForm.capabilities.length === 0) {
+            ElMessage.error('请至少选择一个模型能力')
+            return
+          }
+
+          // 验证所有能力都配置了Provider
+          for (const capability of modelForm.capabilities) {
+            if (!modelForm.provider_mapping[capability]) {
+              ElMessage.error(`请为"${getCapabilityLabel(capability)}"能力选择Provider`)
+              return
+            }
+          }
+
+          // 准备提交数据
+          const submitData = {
+            id: modelForm.id,
+            name: modelForm.name.trim(),
+            ai_model_name: modelForm.modelName.trim(),
+            base_url: modelForm.baseUrl.trim(),
+            api_key: modelForm.apiKey.trim(),
+            capabilities: modelForm.capabilities,
+            provider_mapping: modelForm.provider_mapping,
+            max_tokens: parseInt(modelForm.maxTokens) || 8192,
+            context_window: modelForm.contextWindow ? parseInt(modelForm.contextWindow) : undefined,
+            is_enabled: modelForm.isEnabled,
+            is_default: modelForm.isDefault
           }
 
           if (drawerType.value === 'add') {
-            modelStore.addModel({
-              ...sanitizedData,
-              id: Date.now().toString(),
-              createTime: new Date().toISOString()
-            })
+            modelStore.addModel(submitData)
             ElMessage.success('添加成功')
           }
           else {
-            modelStore.updateModel(sanitizedData)
+            modelStore.updateModel(submitData)
             ElMessage.success('更新成功')
           }
           drawerVisible.value = false
@@ -407,7 +499,7 @@ export default defineComponent({
       })
     }
 
-    const handleDelete = (row: ModelData) => {
+    const handleDelete = (row: any) => {
       ElMessageBox.confirm('确认删除该模型吗？', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
@@ -418,37 +510,41 @@ export default defineComponent({
       })
     }
 
-    const handleCopy = async (row: ModelData) => {
+    const handleCopy = async (row: any) => {
       try {
         // 获取完整的模型详情（包含API密钥等敏感信息）
         const modelDetail = await apiService.getAIModelDetail(row.id)
         const copyData = {
-          id: '',
-          name: `${modelDetail.name} - 副本`,
-          type: modelDetail.supports_image_generation ? 'image' : 'text',
-          provider: modelDetail.provider || 'opencompatible',
+          name: modelDetail.name,
+          modelName: modelDetail.ai_model_name || '',
           baseUrl: modelDetail.base_url || '',
           apiKey: modelDetail.api_key || '',
-          modelName: modelDetail.ai_model_name || '',
-          parameters: modelDetail.parameters || '',
-          maxTokens: modelDetail.max_tokens || '8192',
+          capabilities: modelDetail.capabilities || [],
+          provider_mapping: modelDetail.provider_mapping || {},
+          maxTokens: modelDetail.max_tokens?.toString() || '8192',
+          contextWindow: modelDetail.context_window?.toString() || '',
           isEnabled: modelDetail.is_enabled,
-          isDefault: false, // 复制时默认不设为默认模型
-          supportsVision: modelDetail.supports_vision || false,
-          createTime: ''
-        } as ModelData
+          isDefault: false
+        }
         openDrawer('add', copyData)
       }
       catch (error) {
-        console.error('获取模型详情失败:', error)
-        // 如果获取详情失败，使用列表中的基本信息（不包含API_KEY）
-        const copyData = { ...row }
-        copyData.name = `${copyData.name} - 副本`
-        copyData.id = ''
-        copyData.isDefault = false
-        copyData.createTime = ''
+        // 获取模型详情失败
+        // 如果获取详情失败，使用列表中的基本信息
+        const copyData = {
+          name: row.name,
+          modelName: row.modelName || '',
+          baseUrl: row.baseUrl || '',
+          apiKey: '',
+          capabilities: row.capabilities || [],
+          provider_mapping: row.provider_mapping || {},
+          maxTokens: row.maxTokens?.toString() || '8192',
+          contextWindow: row.contextWindow?.toString() || '',
+          isEnabled: row.isEnabled,
+          isDefault: false
+        }
         openDrawer('add', copyData)
-        ElMessage.warning('无法获取完整模型信息，部分字段需要手动填写')
+        ElMessage.warning('无法获取完整模型信息，API密钥需要重新填写')
       }
     }
 
@@ -461,44 +557,13 @@ export default defineComponent({
       currentPage.value = 1
     }
 
-    // 处理模型类型变更
-    const handleTypeChange = (value: string) => {
-      // 根据类型调整Provider选项
-      if (value === 'image') {
-        // 文生图模型默认选择OpenAI兼容模式
-        modelForm.value.provider = 'opencompatible'
-        // 设置默认的Base URL
-        if (!modelForm.value.baseUrl) {
-          modelForm.value.baseUrl = 'https://api.openai.com'
-        }
-      }
-      else if (value === 'text') {
-        // 文本模型默认选择OpenAI兼容模式
-        modelForm.value.provider = 'opencompatible'
-        // 设置默认的Base URL
-        if (!modelForm.value.baseUrl) {
-          modelForm.value.baseUrl = 'https://api.openai.com'
-        }
-      }
-    }
-
     // Provider相关的辅助函数
     const getProviderLabel = (provider: string) => {
-      const providerMap: Record<string, string> = {
-        'opencompatible': 'OpenAI兼容',
-        'gemini': 'Gemini',
-        'nano_banana': 'Nano Banana'
-      }
-      return providerMap[provider] || provider
+      return getProviderLabelUtil(provider)
     }
 
     const getProviderTagType = (provider: string) => {
-      const typeMap: Record<string, string> = {
-        'opencompatible': 'warning',
-        'gemini': 'success',
-        'nano_banana': 'primary'
-      }
-      return typeMap[provider] || 'info'
+      return getProviderTagTypeUtil(provider)
     }
 
     onMounted(() => {
@@ -518,14 +583,17 @@ export default defineComponent({
       rules,
       formRef,
       filteredModels,
-      providerOptions,
+      availableCapabilities,
+      getCapabilityLabel,
+      getCapabilityType,
+      getProvidersForCapability,
+      handleCapabilitiesChange,
       openDrawer,
       handleSubmit,
       handleDelete,
       handleCopy,
       handleCurrentChange,
       handleSizeChange,
-      handleTypeChange,
       getProviderLabel,
       getProviderTagType,
       Search,
