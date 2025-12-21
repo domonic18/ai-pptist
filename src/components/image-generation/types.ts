@@ -21,14 +21,18 @@ export interface GenerationForm {
 export interface ModelInfo {
   id: string
   name: string
-  provider: string
-  is_enabled: boolean
-  is_default: boolean
-  ai_model_name?: string
+  ai_model_name: string
   base_url?: string
   api_key?: string
-  parameters?: string
-  max_tokens?: string
+  capabilities: string[]
+  provider_mapping: Record<string, string>
+  parameters?: Record<string, any>
+  max_tokens?: number
+  is_enabled: boolean
+  is_default: boolean
+  
+  // 便捷字段：图片生成的provider（从provider_mapping获取）
+  provider?: string
   created_at?: string
 }
 

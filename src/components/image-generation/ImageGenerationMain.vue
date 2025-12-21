@@ -479,8 +479,13 @@ const loadModels = async () => {
     addLog('info', '正在加载图片生成模型列表...')
     const models = await apiService.getImageGenerationModels()
 
-    // 过滤启用的模型并转换为选项格式
-    availableModels.value = models.filter((m: any) => m.is_enabled)
+    // 过滤启用的模型并转换为选项格式（添加便捷provider字段）
+    availableModels.value = models
+      .filter((m: any) => m.is_enabled)
+      .map((m: any) => ({
+        ...m,
+        provider: m.provider_mapping?.image_gen || m.provider_mapping?.chat || 'openai'
+      }))
 
     // 设置默认模型
     const defaultModel = models.find((m: any) => m.is_default && m.is_enabled)

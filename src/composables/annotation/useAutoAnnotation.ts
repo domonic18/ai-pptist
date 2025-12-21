@@ -194,9 +194,9 @@ export function useAutoAnnotation() {
    * 获取默认视觉模型ID
    */
   const getDefaultVisionModelId = (): string => {
-    // 从模型存储中获取支持视觉的文本模型
+    // 从模型存储中获取支持视觉的模型
     const visionModels = modelStore.models.filter(model =>
-      model.type === 'text' && model.supportsVision && model.isEnabled
+      model.capabilities.includes('vision') && model.isEnabled
     )
 
     if (visionModels.length > 0) {

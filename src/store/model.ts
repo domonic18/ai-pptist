@@ -11,16 +11,11 @@ export interface ModelData {
   apiKey?: string
   capabilities: ModelCapability[]
   provider_mapping: ProviderMapping
+  parameters?: Record<string, any>
   maxTokens?: number
   contextWindow?: number
   isEnabled: boolean
   isDefault: boolean
-  
-  // 向后兼容旧字段
-  type?: 'text' | 'image'
-  provider?: string
-  parameters?: string
-  supportsVision?: boolean
   createTime?: string
 }
 
@@ -37,14 +32,6 @@ interface BackendModelData {
   context_window?: number
   is_enabled: boolean
   is_default: boolean
-  
-  // 旧字段（向后兼容）
-  provider?: string
-  supports_image_generation?: boolean
-  supports_chat?: boolean
-  supports_embeddings?: boolean
-  supports_vision?: boolean
-  supports_tools?: boolean
   created_at?: string
   updated_at?: string
 }
@@ -57,18 +44,15 @@ export const useModelStore = defineStore('model', () => {
     models.value = backendModels.map((model: BackendModelData) => ({
       id: model.id,
       name: model.name,
-      modelName: model.ai_model_name || '',
+      modelName: model.ai_model_name,
       baseUrl: model.base_url || '',
-      capabilities: (model.capabilities || []) as ModelCapability[],
-      provider_mapping: (model.provider_mapping || {}) as ProviderMapping,
+      capabilities: model.capabilities as ModelCapability[],
+      provider_mapping: model.provider_mapping as ProviderMapping,
+      parameters: model.parameters || {},
       maxTokens: model.max_tokens,
       contextWindow: model.context_window,
       isEnabled: model.is_enabled,
       isDefault: model.is_default,
-      
-      // 向后兼容：从旧字段推导
-      type: model.supports_image_generation ? 'image' : 'text',
-      provider: model.provider,
       createTime: model.created_at || new Date().toISOString()
     }))
   }
@@ -90,7 +74,7 @@ export const useModelStore = defineStore('model', () => {
     }
 
     // Call backend API to create model
-    const createdModel = await apiService.createAIModel(backendModel)
+    await apiService.createAIModel(backendModel)
 
     // Reload models to get fresh data
     await loadModels()
@@ -136,14 +120,13 @@ export const useModelStore = defineStore('model', () => {
 
   const getModelsByType = (type: 'text' | 'image') => {
     return models.value.filter(model => {
-      // 新架构：基于 capabilities
       if (type === 'text') {
         return model.capabilities.includes('chat') || model.capabilities.includes('vision')
-      } else if (type === 'image') {
+      }
+      else if (type === 'image') {
         return model.capabilities.includes('image_gen')
       }
-      // 向后兼容：使用 type 字段
-      return model.type === type
+      return false
     })
   }
 

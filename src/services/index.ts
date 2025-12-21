@@ -33,52 +33,32 @@ interface AIWritingPayload {
 interface AIModel {
   id: string
   name: string
-  provider: string
-  is_enabled: boolean
-  is_default: boolean
+  ai_model_name: string
   base_url?: string
   api_key?: string
-  ai_model_name?: string
-  parameters?: string | Record<string, any>
-  max_tokens?: string | number
+  capabilities: string[]
+  provider_mapping: Record<string, string>
+  parameters?: Record<string, any>
+  max_tokens?: number
   context_window?: number
-  
-  // 新架构字段
-  capabilities?: string[]
-  provider_mapping?: Record<string, string>
-  
-  // 旧字段（向后兼容）
-  supports_image_generation?: boolean
-  supports_chat?: boolean
-  supports_embeddings?: boolean
-  supports_vision?: boolean
-  supports_tools?: boolean
+  is_enabled: boolean
+  is_default: boolean
   created_at?: string
   updated_at?: string
 }
 
 interface AIModelCreate {
   name: string
-  ai_model_name?: string
+  ai_model_name: string
   base_url?: string
   api_key?: string
-  parameters?: string | Record<string, any>
-  max_tokens?: string | number
+  capabilities: string[]
+  provider_mapping: Record<string, string>
+  parameters?: Record<string, any>
+  max_tokens?: number
   context_window?: number
   is_enabled?: boolean
   is_default?: boolean
-  
-  // 新架构字段
-  capabilities?: string[]
-  provider_mapping?: Record<string, string>
-  
-  // 旧字段（向后兼容）
-  provider?: string
-  supports_image_generation?: boolean
-  supports_chat?: boolean
-  supports_embeddings?: boolean
-  supports_vision?: boolean
-  supports_tools?: boolean
 }
 
 interface AIModelUpdate {
@@ -86,23 +66,13 @@ interface AIModelUpdate {
   ai_model_name?: string
   base_url?: string
   api_key?: string
-  parameters?: string | Record<string, any>
-  max_tokens?: string | number
+  capabilities?: string[]
+  provider_mapping?: Record<string, string>
+  parameters?: Record<string, any>
+  max_tokens?: number
   context_window?: number
   is_enabled?: boolean
   is_default?: boolean
-  
-  // 新架构字段
-  capabilities?: string[]
-  provider_mapping?: Record<string, string>
-  
-  // 旧字段（向后兼容）
-  provider?: string
-  supports_image_generation?: boolean
-  supports_chat?: boolean
-  supports_embeddings?: boolean
-  supports_vision?: boolean
-  supports_tools?: boolean
 }
 
 export default {
