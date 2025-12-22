@@ -99,8 +99,6 @@ export const API_CONFIG = {
     GENERATE_AND_STORE: '/api/v1/generate/image/store',
     // 获取生成历史
     HISTORY: '/api/v1/images/generation-history',
-    // 获取支持的模型列表
-    MODELS: '/api/v1/ai-models/image-generation-models',
   },
 
   // AI模型管理相关API

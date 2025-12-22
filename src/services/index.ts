@@ -148,8 +148,13 @@ export default {
   },
 
   // 获取AI模型列表
-  async getAIModels(): Promise<AIModel[]> {
-    const response = await fetch(API_CONFIG.AI_MODELS.LIST)
+  async getAIModels(capability?: string): Promise<AIModel[]> {
+    let url = API_CONFIG.AI_MODELS.LIST
+    if (capability) {
+      url += `?capability=${capability}`
+    }
+    
+    const response = await fetch(url)
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
@@ -163,16 +168,7 @@ export default {
 
   // 获取支持图片生成的AI模型列表
   async getImageGenerationModels(): Promise<AIModel[]> {
-    const response = await fetch(API_CONFIG.IMAGE_GENERATION.MODELS)
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-    const result = await response.json()
-
-    if (result.status === 'success' && result.data && result.data.items) {
-      return result.data.items
-    }
-    throw new Error('Invalid response format')
+    return this.getAIModels('image_gen')
   },
 
   // 获取AI模型详情（包含敏感信息如API密钥）
