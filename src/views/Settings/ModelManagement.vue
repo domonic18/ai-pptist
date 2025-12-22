@@ -31,12 +31,12 @@
   <!-- 内容区域 -->
   <div class="px-6 py-4">
     <el-table :data="filteredModels.data" style="width: 100%" v-loading="loading">
-      <el-table-column prop="name" label="模型名称" />
-      <el-table-column prop="capabilities" label="模型能力" width="250">
+      <el-table-column prop="name" label="模型名称" width="150" />
+      <el-table-column prop="capabilities" label="模型能力" width="180">
         <template #default="{ row }">
           <div class="flex flex-wrap gap-1">
-            <el-tag 
-              v-for="capability in row.capabilities" 
+            <el-tag
+              v-for="capability in row.capabilities"
               :key="capability"
               :type="getCapabilityType(capability)"
               size="small"
@@ -46,29 +46,22 @@
           </div>
         </template>
       </el-table-column>
-      <el-table-column prop="provider" label="Provider" width="120">
-        <template #default="{ row }">
-          <el-tag :type="getProviderTagType(row.provider)">
-            {{ getProviderLabel(row.provider) }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="baseUrl" label="Base URL" show-overflow-tooltip />
-      <el-table-column prop="modelName" label="Model Name" />
-      <el-table-column prop="maxTokens" label="最大Token数" width="120" />
-      <el-table-column label="状态" width="100">
+      <el-table-column prop="baseUrl" label="Base URL" show-overflow-tooltip width="200" />
+      <el-table-column prop="modelName" label="Model Name" min-width="150" show-overflow-tooltip />
+      <el-table-column prop="maxTokens" label="Token限制" width="95" />
+      <el-table-column label="状态" width="85">
         <template #default="{ row }">
           <el-tag :type="row.isEnabled ? 'success' : 'danger'">
             {{ row.isEnabled ? '启用' : '禁用' }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="默认" width="80">
+      <el-table-column label="默认" width="75" align="center">
         <template #default="{ row }">
-          <el-tag v-if="row.isDefault" type="primary">默认</el-tag>
+          <el-tag v-if="row.isDefault" type="primary" size="small">默认</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="200">
+      <el-table-column label="操作" width="180" align="center">
         <template #default="{ row }">
           <el-button-group>
             <el-button type="primary" @click="openDrawer('edit', row)" class="!rounded-button whitespace-nowrap">
@@ -101,21 +94,22 @@
   <el-drawer
     v-model="drawerVisible"
     :title="drawerType === 'add' ? '新增模型' : '编辑模型'"
-    size="1200px"
+    :size="1200"
     :close-on-click-modal="false"
     destroy-on-close
+    class="model-drawer"
   >
-    <div class="p-4">
+    <div class="p-4 form-container">
       <el-form ref="formRef" :model="modelForm" :rules="rules" label-width="120px">
         <el-form-item label="显示名称" prop="name">
           <el-input v-model="modelForm.name" placeholder="请输入模型显示名称，该名称用于在下拉列表中显示" />
         </el-form-item>
-        
+
         <!-- 能力选择 -->
         <el-form-item label="模型能力" prop="capabilities">
           <el-checkbox-group v-model="modelForm.capabilities" @change="handleCapabilitiesChange">
-            <el-checkbox 
-              v-for="capability in availableCapabilities" 
+            <el-checkbox
+              v-for="capability in availableCapabilities"
               :key="capability.value"
               :label="capability.value"
             >
@@ -148,8 +142,10 @@
               :label="provider.label"
               :value="provider.value"
             >
-              <span>{{ provider.label }}</span>
-              <span class="text-xs text-gray-400 ml-2">{{ provider.description }}</span>
+              <div>
+                <div class="font-medium">{{ provider.label }}</div>
+                <div class="text-xs text-gray-400 mt-1">{{ provider.description }}</div>
+              </div>
             </el-option>
           </el-select>
         </el-form-item>

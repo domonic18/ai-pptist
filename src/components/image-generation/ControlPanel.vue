@@ -17,7 +17,7 @@
           <div class="form-item compact">
             <label class="form-label">选择模型</label>
             <el-select
-              v-model="form.generation_model"
+              v-model="form.ai_model_id"
               placeholder="选择模型"
               class="model-select"
               :disabled="loading"
@@ -25,17 +25,10 @@
               <el-option
                 v-for="model in availableModels"
                 :key="model.id"
-                :label="`${model.name} (${model.provider})`"
-                :value="model.ai_model_name || model.name"
-              >
-                <div class="model-option">
-                  <div class="model-info">
-                    <span class="model-name">{{ model.name }}</span>
-                    <span class="model-provider">{{ model.provider }}</span>
-                  </div>
-                  <el-tag type="info" size="small">{{ model.provider }}</el-tag>
-                </div>
-              </el-option>
+                :label="model.name"
+                :value="model.id"
+              />
+
             </el-select>
           </div>
         </div>
@@ -204,7 +197,7 @@ const imageSize = computed({
 })
 
 const canGenerate = computed(() =>
-  props.form.prompt.trim() && props.form.generation_model
+  props.form.prompt.trim() && props.form.ai_model_id
 )
 
 /**

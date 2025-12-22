@@ -4,7 +4,7 @@
 
 export interface GenerationForm {
   prompt: string
-  generation_model: string
+  ai_model_id: string
   width: number
   height: number
   quality: string

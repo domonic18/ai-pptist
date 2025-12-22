@@ -83,7 +83,7 @@ const previewVisible = ref(false)
 // 表单数据
 const generationForm = ref<GenerationForm>({
   prompt: '',
-  generation_model: '',
+  ai_model_id: '',
   width: 1024,
   height: 1024,
   quality: 'standard',
@@ -328,7 +328,7 @@ const generateImage = async () => {
     ElMessage.warning('请输入图片描述')
     return
   }
-  if (!generationForm.value.generation_model) {
+  if (!generationForm.value.ai_model_id) {
     ElMessage.warning('请选择生成模型')
     return
   }
@@ -338,7 +338,7 @@ const generateImage = async () => {
     id: imageId,
     url: '',
     prompt: generationForm.value.prompt.trim(),
-    generation_model: generationForm.value.generation_model,
+    generation_model: generationForm.value.ai_model_id,
     width: generationForm.value.width,
     height: generationForm.value.height,
     status: 'generating',
@@ -351,7 +351,7 @@ const generateImage = async () => {
 
   addLog('info', '开始图片生成流程')
   addLog('info', `提示词: ${generationForm.value.prompt}`)
-  addLog('info', `模型: ${generationForm.value.generation_model}`)
+  addLog('info', `模型ID: ${generationForm.value.ai_model_id}`)
   addLog('info', `尺寸: ${generationForm.value.width}×${generationForm.value.height}`)
 
   try {
@@ -479,21 +479,21 @@ const loadModels = async () => {
     addLog('info', '正在加载图片生成模型列表...')
     const models = await apiService.getImageGenerationModels()
 
-    // 过滤启用的模型并转换为选项格式（添加便捷provider字段）
+    // 过滤启用的、支持文生图的模型
     availableModels.value = models
-      .filter((m: any) => m.is_enabled)
+      .filter((m: any) => m.is_enabled && m.capabilities?.includes('image_gen'))
       .map((m: any) => ({
         ...m,
-        provider: m.provider_mapping?.image_gen || m.provider_mapping?.chat || 'openai'
+        provider: m.provider_mapping?.image_gen || 'openai'
       }))
 
     // 设置默认模型
     const defaultModel = models.find((m: any) => m.is_default && m.is_enabled)
     if (defaultModel) {
-      generationForm.value.generation_model = defaultModel.ai_model_name || defaultModel.name
+      generationForm.value.ai_model_id = defaultModel.id
     }
 
-    addLog('info', `成功加载 ${availableModels.value.length} 个可用模型`)
+    addLog('info', `成功加载 ${availableModels.value.length} 个可用的图片生成模型`)
   }
   catch (error: any) {
     addLog('error', '加载图片生成模型列表失败')

@@ -176,34 +176,16 @@ export const PROVIDER_OPTIONS: Record<ModelCapability, ProviderOption[]> = {
   ],
   image_gen: [
     {
-      label: 'OpenAI DALL-E',
-      value: 'openai_dalle',
-      capabilities: ['image_gen'],
-      description: 'OpenAI DALL-E 3'
-    },
-    {
       label: 'Nano Banana',
       value: 'nano_banana',
       capabilities: ['image_gen'],
       description: 'Gemini 3 Pro Image Preview'
     },
     {
-      label: 'Gemini Imagen',
-      value: 'gemini_imagen',
+      label: '硅基流动',
+      value: 'siliconflow',
       capabilities: ['image_gen'],
-      description: 'Google Imagen（待实现）'
-    },
-    {
-      label: '通义万相',
-      value: 'qwen',
-      capabilities: ['image_gen'],
-      description: '阿里云通义万相'
-    },
-    {
-      label: '火山引擎',
-      value: 'volcengine_ark',
-      capabilities: ['image_gen'],
-      description: '火山引擎文生图'
+      description: '硅基流动文生图（支持Qwen、Kolors等模型）'
     }
   ],
   video_gen: [
@@ -280,6 +262,7 @@ export function getProviderTagType(provider: string): 'primary' | 'success' | 'w
     'nano_banana': 'warning',
     'qwen': 'danger',
     'volcengine_ark': 'info',
+    'siliconflow': 'warning',
     'runway': 'danger',
     'pika': 'danger'
   }
