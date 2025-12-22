@@ -176,10 +176,10 @@ export const PROVIDER_OPTIONS: Record<ModelCapability, ProviderOption[]> = {
   ],
   image_gen: [
     {
-      label: 'Nano Banana',
-      value: 'nano_banana',
+      label: 'Google GenAI',
+      value: 'genai',
       capabilities: ['image_gen'],
-      description: 'Gemini 3 Pro Image Preview'
+      description: 'Google GenAI (Gemini) 图片生成'
     },
     {
       label: '硅基流动',
@@ -259,7 +259,7 @@ export function getProviderTagType(provider: string): 'primary' | 'success' | 'w
     'gemini': 'success',
     'gemini_imagen': 'success',
     'anthropic': 'info',
-    'nano_banana': 'warning',
+    'genai': 'success',
     'qwen': 'danger',
     'volcengine_ark': 'info',
     'siliconflow': 'warning',
