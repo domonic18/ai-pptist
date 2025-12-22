@@ -163,7 +163,7 @@ export default {
 
   // 获取支持图片生成的AI模型列表
   async getImageGenerationModels(): Promise<AIModel[]> {
-    const response = await fetch(`${API_CONFIG.AI_MODELS.LIST}?supports_image_generation=true`)
+    const response = await fetch(API_CONFIG.IMAGE_GENERATION.MODELS)
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }

@@ -49,39 +49,39 @@ export default function useAIModelSelection() {
 
       // 分类模型
       const chatModels = models.filter((m: any) =>
-        m.is_enabled && m.supports_chat
+        m.is_enabled && m.capabilities?.includes('chat')
       )
       const imageModels = models.filter((m: any) =>
-        m.is_enabled && m.supports_image_generation
+        m.is_enabled && m.capabilities?.includes('image_gen')
       )
 
       // 转换为选项格式
       chatModelOptions.value = chatModels.map((m: any) => ({
         label: m.name,
-        value: m.ai_model_name || m.name
+        value: m.id
       }))
 
       imageModelOptions.value = imageModels.map((m: any) => ({
         label: m.name,
-        value: m.ai_model_name || m.name
+        value: m.id
       }))
 
       // 设置默认模型 - 优先选择标记为默认的模型，否则选择第一个
       const defaultChatModel = models.find((m: any) => 
-        m.is_default && m.is_enabled && m.supports_chat
+        m.is_default && m.is_enabled && m.capabilities?.includes('chat')
       )
       if (defaultChatModel) {
-        selectedChatModel.value = defaultChatModel.ai_model_name || defaultChatModel.name
+        selectedChatModel.value = defaultChatModel.id
       }
       else if (chatModelOptions.value.length > 0) {
         selectedChatModel.value = chatModelOptions.value[0].value
       }
 
       const defaultImageModel = models.find((m: any) => 
-        m.is_default && m.is_enabled && m.supports_image_generation
+        m.is_default && m.is_enabled && m.capabilities?.includes('image_gen')
       )
       if (defaultImageModel) {
-        selectedImageModel.value = defaultImageModel.ai_model_name || defaultImageModel.name
+        selectedImageModel.value = defaultImageModel.id
       }
       else if (imageModelOptions.value.length > 0) {
         selectedImageModel.value = imageModelOptions.value[0].value

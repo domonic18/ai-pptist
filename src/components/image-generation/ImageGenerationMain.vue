@@ -480,15 +480,23 @@ const loadModels = async () => {
     const models = await apiService.getImageGenerationModels()
 
     // 过滤启用的、支持文生图的模型
-    availableModels.value = models
+    const filteredModels = models
       .filter((m: any) => m.is_enabled && m.capabilities?.includes('image_gen'))
       .map((m: any) => ({
         ...m,
         provider: m.provider_mapping?.image_gen || 'openai'
       }))
+    
+    availableModels.value = filteredModels
 
-    // 设置默认模型
-    const defaultModel = models.find((m: any) => m.is_default && m.is_enabled)
+    // 设置默认模型：优先从过滤后的模型中查找设为默认的模型
+    let defaultModel = filteredModels.find((m: any) => m.is_default)
+    
+    // 如果没有明确设置默认，则取第一个可用模型
+    if (!defaultModel && filteredModels.length > 0) {
+      defaultModel = filteredModels[0]
+    }
+
     if (defaultModel) {
       generationForm.value.ai_model_id = defaultModel.id
     }

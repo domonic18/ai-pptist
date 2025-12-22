@@ -158,7 +158,6 @@ const outlineRef = useTemplateRef<HTMLElement>('outlineRef')
 const inputRef = useTemplateRef<InstanceType<typeof Input>>('inputRef')
 const modelOptions = ref<Array<{ label: string; value: string }>>([])
 const modelsLoading = ref(false)
-const allModels = ref<any[]>([]) // 保存模型列表（用于获取模型ID）
 
 const {
   outline,
@@ -172,41 +171,24 @@ const {
 
 const loading = ref(false)
 
-// 根据模型名称获取模型ID
-const getModelId = (modelName: string): string | null => {
-  const fullModel = allModels.value.find(m => 
-    (m.ai_model_name === modelName || m.name === modelName)
-  )
-  
-  if (!fullModel) {
-    console.warn('未找到模型:', modelName)
-    return null
-  }
-
-  return fullModel.id
-}
-
 // 获取AI模型列表
 const fetchAIModels = async () => {
   modelsLoading.value = true
   try {
     const models = await apiService.getAIModels()
-    
-    // 保存模型列表（用于查找模型ID）
-    allModels.value = models
 
     // 过滤启用的对话模型并转换为选项格式
     modelOptions.value = models
-      .filter(m => m.is_enabled && m.capabilities.includes('chat'))
+      .filter(m => m.is_enabled && m.capabilities?.includes('chat'))
       .map(m => ({
         label: m.name,
-        value: m.ai_model_name || m.name
+        value: m.id
       }))
 
     // 设置默认模型 - 优先选择标记为默认的对话模型，否则选择第一个对话模型
-    const defaultModel = models.find((m: any) => m.is_default && m.is_enabled && m.capabilities.includes('chat'))
+    const defaultModel = models.find((m: any) => m.is_default && m.is_enabled && m.capabilities?.includes('chat'))
     if (defaultModel) {
-      model.value = defaultModel.ai_model_name || defaultModel.name
+      model.value = defaultModel.id
     }
     else if (modelOptions.value.length > 0) {
       model.value = modelOptions.value[0].value
@@ -262,19 +244,12 @@ const createOutline = async () => {
 
   loading.value = true
 
-  // 获取模型ID（只传递ID，不传递敏感信息如API key）
-  const modelId = getModelId(model.value)
-  if (!modelId) {
-    loading.value = false
-    return message.error('无法获取模型ID，请重新选择模型')
-  }
-
   const success = await generateOutline({
     title: keyword.value,
     input_content: keyword.value,
     language: language.value,
     slide_count: slideCount.value,
-    ai_model_id: modelId  // 只传递模型ID
+    ai_model_id: model.value
   })
 
   loading.value = false
@@ -287,19 +262,11 @@ const createOutline = async () => {
 const createPPT = async (template?: { slides: Slide[], theme: SlideTheme, width?: number, height?: number }) => {
   loading.value = true
 
-  // 获取模型ID（只传递ID，不传递敏感信息如API key）
-  const modelId = getModelId(model.value)
-  if (!modelId) {
-    loading.value = false
-    message.error('无法获取模型ID，请重新选择模型')
-    return
-  }
-
   const success = await generatePPT({
     content: outline.value,
     language: language.value,
     style: style.value,
-    model: modelId,  // 传递模型ID而不是模型名称
+    model: model.value,
   }, selectedTemplate.value, img.value, template)
 
   loading.value = false

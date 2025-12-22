@@ -21,6 +21,7 @@
               placeholder="选择模型"
               class="model-select"
               :disabled="loading"
+              clearable
             >
               <el-option
                 v-for="model in availableModels"
@@ -28,7 +29,6 @@
                 :label="model.name"
                 :value="model.id"
               />
-
             </el-select>
           </div>
         </div>
