@@ -176,6 +176,12 @@ export const PROVIDER_OPTIONS: Record<ModelCapability, ProviderOption[]> = {
   ],
   image_gen: [
     {
+      label: 'OpenAI兼容',
+      value: 'openai_compatible',
+      capabilities: ['image_gen'],
+      description: 'OpenAI兼容文生图（支持通过 Chat 或 Standard API 生成）'
+    },
+    {
       label: 'Google GenAI',
       value: 'genai',
       capabilities: ['image_gen'],
