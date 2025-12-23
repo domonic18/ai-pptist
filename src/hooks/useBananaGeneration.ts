@@ -6,11 +6,11 @@
 import { ref, onUnmounted } from 'vue'
 import { useSlidesStore, useMainStore } from '@/store'
 import bananaGenerationService from '@/services/bananaGenerationService'
-import type {
-  GenerateBatchSlidesRequest,
-  GenerationStatusResponse,
+import {
+  GenerationStatus,
+  type GenerateBatchSlidesRequest,
+  type GenerationStatusResponse,
 } from '@/types/banana-generation'
-import { GenerationStatus } from '@/types/banana-generation'
 import message from '@/utils/message'
 import { nanoid } from 'nanoid'
 import type { Slide, PPTElement } from '@/types/slides'
@@ -27,6 +27,7 @@ export default function useBananaGeneration() {
 
   /**
    * 创建空幻灯片（带骨架图占位符）
+   * 使用纯色背景和文字，避免依赖外部图片文件
    */
   const createEmptySlides = (totalSlides: number) => {
     const newSlides: Slide[] = []
@@ -35,32 +36,26 @@ export default function useBananaGeneration() {
       const slide: Slide = {
         id: nanoid(10),
         elements: [
-          // 骨架图占位符
-          {
-            type: 'image',
-            id: nanoid(10),
-            left: 0,
-            top: 0,
-            width: slidesStore.viewportSize,
-            height: slidesStore.viewportSize * slidesStore.viewportRatio,
-            src: '/imgs/skeleton-loading.gif', // 使用骨架图
-            fixedRatio: true,
-          } as PPTElement,
-          // 加载文字
+          // 加载文字 - 居中显示
           {
             type: 'text',
             id: nanoid(10),
-            left: slidesStore.viewportSize / 2 - 100,
+            left: slidesStore.viewportSize / 2 - 150,
             top: slidesStore.viewportSize * slidesStore.viewportRatio / 2 - 20,
-            width: 200,
+            width: 300,
             height: 40,
-            content: '正在生成图片...',
+            rotate: 0,
+            content: `<p style="text-align: center; font-size: 28px; color: #999;">正在生成第 ${i + 1} 页图片...</p>`,
             defaultColor: '#999',
+            defaultFontName: 'Microsoft YaHei',
+            fontSize: 28,
+            fontFamily: 'Microsoft YaHei',
+            textType: 'title',
           } as PPTElement,
         ],
         background: {
           type: 'solid',
-          color: '#f5f5f5',
+          color: '#f0f0f0', // 浅灰色背景作为占位符
         },
       }
       newSlides.push(slide)
@@ -90,6 +85,7 @@ export default function useBananaGeneration() {
       top: 0,
       width: slidesStore.viewportSize,
       height: slidesStore.viewportSize * slidesStore.viewportRatio,
+      rotate: 0,
       src: imageUrl,
       fixedRatio: true,
     }
