@@ -391,7 +391,7 @@ const openBananaTemplateSelector = () => {
 }
 
 // 处理香蕉模板确认
-const handleBananaTemplateConfirm = async (templateId: string) => {
+const handleBananaTemplateConfirm = async (templateId: string, modelId: string) => {
   showBananaTemplateSelector.value = false
 
   // 解析大纲
@@ -405,10 +405,10 @@ const handleBananaTemplateConfirm = async (templateId: string) => {
   const success = await startGeneration({
     outline: outlineData,
     templateId,
-    generationModel: imageGenerationModel.value,
+    generationModel: modelId,
     canvasSize: {
-      width: slideStore.viewportSize,
-      height: slideStore.viewportSize * slideStore.viewportRatio,
+      width: Math.round(slideStore.viewportSize),
+      height: Math.round(slideStore.viewportSize * slideStore.viewportRatio),
     },
   })
 
