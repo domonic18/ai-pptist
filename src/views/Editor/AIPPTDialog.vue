@@ -101,6 +101,10 @@
          <OutlineEditor v-model:value="outline" />
        </div>
       <div class="btns" v-if="!outlineCreating">
+        <Button class="btn banana-btn" @click="openBananaTemplateSelector">
+          <span class="banana-icon">🍌</span>
+          香蕉生成
+        </Button>
         <Button class="btn" type="primary" @click="step = 'template'">选择模板</Button>
         <Button class="btn" @click="outline = ''; step = 'setup'">返回重新生成</Button>
       </div>
@@ -123,6 +127,24 @@
     </div>
 
     <FullscreenSpin :loading="loading" tip="AI生成中，请耐心等待 ..." />
+
+    <!-- 香蕉模板选择对话框 -->
+    <BananaTemplateSelector
+      :visible="showBananaTemplateSelector"
+      @update:visible="showBananaTemplateSelector = $event"
+      @close="showBananaTemplateSelector = false"
+      @confirm="handleBananaTemplateConfirm"
+    />
+
+    <!-- 生成进度对话框 -->
+    <BananaProgressDialog
+      v-if="showProgressDialog"
+      :visible="showProgressDialog"
+      :status-data="generationStatus"
+      @close="handleProgressDialogClose"
+      @stop="handleStopGeneration"
+      @retry="handleRegenerateSlide"
+    />
   </div>
 </template>
 
@@ -140,7 +162,12 @@ import Button from '@/components/Button.vue'
 import Select from '@/components/Select.vue'
 import FullscreenSpin from '@/components/FullscreenSpin.vue'
 import OutlineEditor from '@/components/OutlineEditor.vue'
+import BananaTemplateSelector from '@/components/BananaTemplateSelector.vue'
+import BananaProgressDialog from '@/components/BananaProgressDialog.vue'
 import apiService from '@/services'
+import useBananaGeneration from '@/hooks/useBananaGeneration'
+import { parseOutlineFromMarkdown, validateOutlineData } from '@/utils/outlineParser'
+import type { OutlineData } from '@/types/banana-generation'
 
 const mainStore = useMainStore()
 const slideStore = useSlidesStore()
@@ -169,7 +196,20 @@ const {
   createPPT: generatePPT
 } = usePPTCreation()
 
+const {
+  startGeneration,
+  stopGeneration,
+  regenerateSlide,
+  getCurrentStatus,
+  isGenerating,
+} = useBananaGeneration()
+
 const loading = ref(false)
+const showBananaTemplateSelector = ref(false)
+const showProgressDialog = ref(false)
+const generationStatus = ref<any>(null)
+const imageGenerationModel = ref('')
+const imageModelOptions = ref<Array<{ label: string; value: string }>>([])
 
 // 获取AI模型列表
 const fetchAIModels = async () => {
@@ -210,9 +250,38 @@ const fetchAIModels = async () => {
   }
 }
 
+// 获取图片生成模型列表
+const fetchImageGenerationModels = async () => {
+  try {
+    const models = await apiService.getImageGenerationModels()
+
+    // 过滤启用的图片生成模型并转换为选项格式
+    imageModelOptions.value = models
+      .filter(m => m.is_enabled)
+      .map(m => ({
+        label: m.name,
+        value: m.id
+      }))
+
+    // 设置默认模型
+    const defaultModel = models.find((m: any) => m.is_default && m.is_enabled)
+    if (defaultModel) {
+      imageGenerationModel.value = defaultModel.id
+    }
+    else if (imageModelOptions.value.length > 0) {
+      imageGenerationModel.value = imageModelOptions.value[0].value
+    }
+  }
+  catch (error) {
+    console.error('Failed to fetch image generation models:', error)
+    message.error('获取图片生成模型列表失败')
+  }
+}
+
 // 组件挂载时获取模型列表
 onMounted(() => {
   fetchAIModels()
+  fetchImageGenerationModels()
 })
 
 const recommends = ref([
@@ -298,6 +367,105 @@ const uploadLocalTemplate = () => {
     }
   })
 }
+
+// 打开香蕉模板选择对话框
+const openBananaTemplateSelector = () => {
+  if (!outline.value) {
+    message.warning('请先生成大纲')
+    return
+  }
+
+  // 解析大纲
+  const outlineData = parseOutlineFromMarkdown(outline.value)
+  if (!outlineData || !validateOutlineData(outlineData)) {
+    message.error('大纲格式不正确，无法使用香蕉生成')
+    return
+  }
+
+  if (!imageGenerationModel.value) {
+    message.warning('请先配置图片生成模型')
+    return
+  }
+
+  showBananaTemplateSelector.value = true
+}
+
+// 处理香蕉模板确认
+const handleBananaTemplateConfirm = async (templateId: string) => {
+  showBananaTemplateSelector.value = false
+
+  // 解析大纲
+  const outlineData = parseOutlineFromMarkdown(outline.value)
+  if (!outlineData || !validateOutlineData(outlineData)) {
+    message.error('大纲格式不正确')
+    return
+  }
+
+  // 开始生成
+  const success = await startGeneration({
+    outline: outlineData,
+    templateId,
+    generationModel: imageGenerationModel.value,
+    canvasSize: {
+      width: slideStore.viewportSize,
+      height: slideStore.viewportSize * slideStore.viewportRatio,
+    },
+  })
+
+  if (success) {
+    // 显示进度对话框
+    showProgressDialog.value = true
+    // 开始轮询状态（用于进度对话框）
+    pollGenerationStatusForDialog()
+  }
+}
+
+// 轮询生成状态（用于进度对话框）
+const pollGenerationStatusForDialog = async () => {
+  if (!showProgressDialog.value) {
+    return
+  }
+
+  try {
+    const status = await getCurrentStatus()
+    if (status) {
+      generationStatus.value = status
+
+      // 如果还在生成中，继续轮询
+      if (status.status === 'processing' || status.status === 'pending') {
+        setTimeout(() => {
+          pollGenerationStatusForDialog()
+        }, 2000)
+      }
+    }
+  } catch (error) {
+    console.error('轮询生成状态失败:', error)
+    // 继续重试
+    setTimeout(() => {
+      pollGenerationStatusForDialog()
+    }, 2000)
+  }
+}
+
+// 处理进度对话框关闭
+const handleProgressDialogClose = () => {
+  showProgressDialog.value = false
+  generationStatus.value = null
+}
+
+// 处理停止生成
+const handleStopGeneration = async () => {
+  await stopGeneration()
+  showProgressDialog.value = false
+  generationStatus.value = null
+}
+
+// 处理重新生成单页
+const handleRegenerateSlide = async (slideIndex: number) => {
+  await regenerateSlide(slideIndex)
+  // 重新开始轮询
+  pollGenerationStatusForDialog()
+}
 </script>
 
 <style lang="scss" scoped>
@@ -348,10 +516,27 @@ const uploadLocalTemplate = () => {
     display: flex;
     justify-content: center;
     align-items: center;
+    gap: 8px;
 
     .btn {
       width: 120px;
       margin: 0 5px;
+
+      &.banana-btn {
+        background: linear-gradient(135deg, #ffd700, #ffa500);
+        color: #333;
+        border: none;
+        font-weight: 500;
+
+        &:hover {
+          background: linear-gradient(135deg, #ffed4e, #ffb347);
+        }
+
+        .banana-icon {
+          font-size: 16px;
+          margin-right: 4px;
+        }
+      }
     }
   }
 }

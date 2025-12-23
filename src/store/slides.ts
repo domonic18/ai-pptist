@@ -250,5 +250,39 @@ export const useSlidesStore = defineStore('slides', {
       })
       this.slides[slideIndex].elements = (elements as PPTElement[])
     },
+
+    /**
+     * 从URL更新幻灯片图片（用于Banana生成）
+     */
+    updateSlideImageFromUrl(slideIndex: number, imageUrl: string) {
+      if (slideIndex < 0 || slideIndex >= this.slides.length) {
+        console.warn(`幻灯片索引 ${slideIndex} 超出范围`)
+        return
+      }
+
+      const slide = this.slides[slideIndex]
+
+      // 创建图片元素
+      const imageElement: PPTElement = {
+        type: 'image',
+        id: window.crypto.randomUUID(),
+        left: 0,
+        top: 0,
+        width: this.viewportSize,
+        height: this.viewportSize * this.viewportRatio,
+        src: imageUrl,
+        fixedRatio: true,
+      }
+
+      // 更新幻灯片
+      this.updateSlide(
+        {
+          elements: [imageElement],
+        },
+        slide.id
+      )
+
+      console.log(`幻灯片 ${slideIndex + 1} 图片已更新`)
+    },
   },
 })
