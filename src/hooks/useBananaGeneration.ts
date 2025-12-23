@@ -1,182 +1,209 @@
 /**
  * Banana生成Hook
- * 管理生成状态和轮询逻辑
+ * 处理PPT图片生成的完整流程：创建任务、轮询状态、更新幻灯片
  */
 
-import { ref, computed } from 'vue'
-import type { Ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ref, onUnmounted } from 'vue'
+import { useSlidesStore, useMainStore } from '@/store'
 import bananaGenerationService from '@/services/bananaGenerationService'
 import type {
-  OutlineData,
-  BananaTemplate,
-  GenerationStatus,
-  SlideGenerationResult,
-  GenerationStatusResponse
+  GenerateBatchSlidesRequest,
+  GenerationStatusResponse,
 } from '@/types/banana-generation'
+import { GenerationStatus } from '@/types/banana-generation'
+import message from '@/utils/message'
+import { nanoid } from 'nanoid'
+import type { Slide, PPTElement } from '@/types/slides'
 
-/**
- * 轮询状态
- */
-enum PollStatus {
-  IDLE = 'idle',
-  RUNNING = 'running',
-  STOPPED = 'stopped',
-  ERROR = 'error'
-}
+const POLL_INTERVAL = 2000 // 2秒轮询一次
 
-/**
- * 使用Banana批量生成
- */
-export function useBananaGeneration() {
-  const currentTaskId: Ref<string | null> = ref(null)
-  const generationStatus: Ref<GenerationStatus | null> = ref(null)
-  const slidesResults: Ref<SlideGenerationResult[]> = ref([])
+export default function useBananaGeneration() {
+  const slidesStore = useSlidesStore()
+  const mainStore = useMainStore()
+
   const isGenerating = ref(false)
-  const pollStatus = ref<PollStatus>(PollStatus.IDLE)
-  const pollInterval: Ref<number | null> = ref(null)
-
-  // 计算进度百分比
-  const progress = computed(() => {
-    const total = slidesResults.value.length
-    const completed = slidesResults.value.filter(s => s.status === 'completed').length
-    return total > 0 ? Math.round((completed / total) * 100) : 0
-  })
-
-  // 计算是否还有正在处理的幻灯片
-  const hasProcessingSlides = computed(() => {
-    return slidesResults.value.some(s => s.status === 'processing')
-  })
-
-  // 计算已完成幻灯片数
-  const completedSlidesCount = computed(() => {
-    return slidesResults.value.filter(s => s.status === 'completed').length
-  })
+  const currentTaskId = ref<string | null>(null)
+  const pollTimer = ref<number | null>(null)
 
   /**
-   * 开始批量生成
+   * 创建空幻灯片（带骨架图占位符）
    */
-  const startGeneration = async (
-    outline: OutlineData,
-    template: BananaTemplate,
-    generationModel: string = 'gemini-3-pro-image-preview',
-    canvasSize: { width: number; height: number } = { width: 1920, height: 1080 }
-  ) => {
-    try {
-      isGenerating.value = true
-      pollStatus.value = PollStatus.RUNNING
+  const createEmptySlides = (totalSlides: number) => {
+    const newSlides: Slide[] = []
 
-      // 调用API开始生成
-      const response = await bananaGenerationService.generateBatchSlides({
-        outline,
-        templateId: template.id,
-        generationModel,
-        canvasSize
-      })
-
-      // 检查响应结构
-      if (!response || !response.success) {
-        throw new Error(response?.error?.message || '生成任务启动失败')
+    for (let i = 0; i < totalSlides; i++) {
+      const slide: Slide = {
+        id: nanoid(10),
+        elements: [
+          // 骨架图占位符
+          {
+            type: 'image',
+            id: nanoid(10),
+            left: 0,
+            top: 0,
+            width: slidesStore.viewportSize,
+            height: slidesStore.viewportSize * slidesStore.viewportRatio,
+            src: '/imgs/skeleton-loading.gif', // 使用骨架图
+            fixedRatio: true,
+          } as PPTElement,
+          // 加载文字
+          {
+            type: 'text',
+            id: nanoid(10),
+            left: slidesStore.viewportSize / 2 - 100,
+            top: slidesStore.viewportSize * slidesStore.viewportRatio / 2 - 20,
+            width: 200,
+            height: 40,
+            content: '正在生成图片...',
+            defaultColor: '#999',
+          } as PPTElement,
+        ],
+        background: {
+          type: 'solid',
+          color: '#f5f5f5',
+        },
       }
-
-      const data = response.data || {}
-      currentTaskId.value = data.taskId
-
-      // 初始化幻灯片结果列表
-      slidesResults.value = outline.slides.map((slide, index) => ({
-        index,
-        title: slide.title,
-        status: 'pending',
-        imageUrl: undefined
-      }))
-
-      // 开始轮询
-      startPolling()
-
-      ElMessage.success('生成任务已启动')
-
-      return currentTaskId.value
-    } catch (error: any) {
-      console.error('启动生成失败:', error)
-      ElMessage.error(error.message || '启动生成失败')
-      isGenerating.value = false
-      pollStatus.value = PollStatus.ERROR
-      throw error
+      newSlides.push(slide)
     }
+
+    // 设置幻灯片
+    slidesStore.setSlides(newSlides)
+    slidesStore.updateSlideIndex(0)
   }
 
   /**
-   * 开始轮询状态
+   * 更新幻灯片图片
    */
-  const startPolling = () => {
-    if (!currentTaskId.value) return
+  const updateSlideImage = (slideIndex: number, imageUrl: string) => {
+    if (slideIndex < 0 || slideIndex >= slidesStore.slides.length) {
+      console.warn(`幻灯片索引 ${slideIndex} 超出范围`)
+      return
+    }
 
-    pollStatus.value = PollStatus.RUNNING
+    const slide = slidesStore.slides[slideIndex]
 
-    pollInterval.value = window.setInterval(async () => {
-      await pollGenerationStatus()
-    }, 2000) as unknown as number
+    // 替换所有元素为单个图片元素
+    const imageElement: PPTElement = {
+      type: 'image',
+      id: nanoid(10),
+      left: 0,
+      top: 0,
+      width: slidesStore.viewportSize,
+      height: slidesStore.viewportSize * slidesStore.viewportRatio,
+      src: imageUrl,
+      fixedRatio: true,
+    }
+
+    // 更新幻灯片
+    slidesStore.updateSlide(
+      {
+        elements: [imageElement],
+      },
+      slide.id
+    )
+
+    console.log(`幻灯片 ${slideIndex + 1} 图片已更新`)
+  }
+
+  /**
+   * 轮询生成状态
+   */
+  const pollGenerationStatus = async () => {
+    if (!currentTaskId.value) {
+      return
+    }
+
+    try {
+      const statusData = await bananaGenerationService.getGenerationStatus(
+        currentTaskId.value
+      )
+
+      // 更新已完成的幻灯片图片
+      if (statusData.slides) {
+        statusData.slides.forEach((slide) => {
+          if (slide.status === 'completed' && slide.imageUrl) {
+            updateSlideImage(slide.index, slide.imageUrl)
+          }
+        })
+      }
+
+      // 判断是否继续轮询
+      if (statusData.status === GenerationStatus.PROCESSING) {
+        // 还在生成中，继续轮询
+        pollTimer.value = window.setTimeout(() => {
+          pollGenerationStatus()
+        }, POLL_INTERVAL)
+      } else if (statusData.status === GenerationStatus.COMPLETED) {
+        // 全部完成
+        isGenerating.value = false
+        const failedCount = statusData.progress.failed || 0
+        if (failedCount === 0) {
+          message.success('幻灯片生成成功！')
+        } else {
+          message.warning(`幻灯片生成完成，${failedCount} 页生成失败`)
+        }
+        stopPolling()
+      } else if (statusData.status === GenerationStatus.FAILED) {
+        // 任务失败
+        isGenerating.value = false
+        message.error('幻灯片生成失败')
+        stopPolling()
+      } else if (statusData.status === GenerationStatus.CANCELLED) {
+        // 任务已取消
+        isGenerating.value = false
+        message.info('生成任务已取消')
+        stopPolling()
+      }
+    } catch (error) {
+      console.error('查询生成状态失败:', error)
+      // 继续重试
+      pollTimer.value = window.setTimeout(() => {
+        pollGenerationStatus()
+      }, POLL_INTERVAL)
+    }
   }
 
   /**
    * 停止轮询
    */
   const stopPolling = () => {
-    if (pollInterval.value) {
-      clearInterval(pollInterval.value)
-      pollInterval.value = null
+    if (pollTimer.value !== null) {
+      clearTimeout(pollTimer.value)
+      pollTimer.value = null
     }
-    pollStatus.value = PollStatus.STOPPED
   }
 
   /**
-   * 查询生成状态（轮询核心逻辑）
+   * 开始生成PPT图片
    */
-  const pollGenerationStatus = async () => {
-    if (!currentTaskId.value) return
+  const startGeneration = async (request: GenerateBatchSlidesRequest) => {
+    if (isGenerating.value) {
+      message.warning('正在生成中，请稍候...')
+      return false
+    }
 
     try {
-      const response = await bananaGenerationService.getGenerationStatus(currentTaskId.value)
+      isGenerating.value = true
 
-      if (!response || !response.success) {
-        throw new Error(response?.error?.message || '查询状态失败')
-      }
+      // 创建空幻灯片（带骨架图）
+      createEmptySlides(request.outline.slides.length)
 
-      const data: GenerationStatusResponse = response.data
+      // 跳转到编辑页面
+      mainStore.setAIPPTDialogState(false)
 
-      // 更新状态
-      generationStatus.value = data.status
-      slidesResults.value = data.slides
+      // 调用API开始生成
+      const response = await bananaGenerationService.generateBatchSlides(request)
+      currentTaskId.value = response.taskId
 
-      // 检查是否需要停止轮询
-      if (data.status === 'completed' || data.status === 'failed') {
-        stopPolling()
-        isGenerating.value = false
+      // 开始轮询状态
+      pollGenerationStatus()
 
-        const completedCount = data.progress.completed
-        const failedCount = data.progress.failed
-
-        // 显示最终结果
-        if (data.status === 'completed') {
-          if (failedCount > 0) {
-            ElMessage.warning(`生成完成，${failedCount}页失败`)
-          } else {
-            ElMessage.success('幻灯片生成成功！')
-          }
-        } else {
-          ElMessage.error('幻灯片生成失败')
-        }
-      }
+      return true
     } catch (error: any) {
-      console.error('查询生成状态失败:', error)
-
-      if (pollStatus.value === PollStatus.RUNNING) {
-        stopPolling()
-        pollStatus.value = PollStatus.ERROR
-        isGenerating.value = false
-      }
-
-      ElMessage.error('查询生成状态失败，请刷新页面重试')
+      console.error('开始生成失败:', error)
+      message.error(error.message || '开始生成失败')
+      isGenerating.value = false
+      return false
     }
   }
 
@@ -184,16 +211,18 @@ export function useBananaGeneration() {
    * 停止生成
    */
   const stopGeneration = async () => {
-    if (!currentTaskId.value || !isGenerating.value) return
+    if (!currentTaskId.value) {
+      return
+    }
 
     try {
       await bananaGenerationService.stopGeneration(currentTaskId.value)
       stopPolling()
       isGenerating.value = false
-      ElMessage.info('已停止生成')
+      message.info('已停止生成')
     } catch (error: any) {
       console.error('停止生成失败:', error)
-      ElMessage.error('停止生成失败')
+      message.error(error.message || '停止生成失败')
     }
   }
 
@@ -202,64 +231,52 @@ export function useBananaGeneration() {
    */
   const regenerateSlide = async (slideIndex: number) => {
     if (!currentTaskId.value) {
-      ElMessage.error('当前没有进行中的生成任务')
       return
     }
 
     try {
-      await bananaGenerationService.regenerateSlide({
-        task_id: currentTaskId.value,
-        slide_index: slideIndex
-      })
+      await bananaGenerationService.regenerateSlide(currentTaskId.value, slideIndex)
+      message.success(`已开始重新生成第 ${slideIndex + 1} 页`)
 
-      // 更新状态为处理中
-      const slide = slidesResults.value.find(s => s.index === slideIndex)
-      if (slide) {
-        slide.status = 'processing'
+      // 重新开始轮询
+      if (!isGenerating.value) {
+        isGenerating.value = true
       }
-
-      ElMessage.success('重新生成已启动')
-
-      // 如果轮询已停止，重新开始
-      if (pollStatus.value !== PollStatus.RUNNING) {
-        startPolling()
-      }
+      pollGenerationStatus()
     } catch (error: any) {
       console.error('重新生成失败:', error)
-      ElMessage.error('重新生成失败')
+      message.error(error.message || '重新生成失败')
     }
   }
 
   /**
-   * 重置状态
+   * 获取当前生成状态（用于进度对话框）
    */
-  const reset = () => {
-    stopPolling()
-    currentTaskId.value = null
-    generationStatus.value = null
-    slidesResults.value = []
-    isGenerating.value = false
-    pollStatus.value = PollStatus.IDLE
+  const getCurrentStatus = async (): Promise<GenerationStatusResponse | null> => {
+    if (!currentTaskId.value) {
+      return null
+    }
+
+    try {
+      return await bananaGenerationService.getGenerationStatus(currentTaskId.value)
+    } catch (error) {
+      console.error('获取生成状态失败:', error)
+      return null
+    }
   }
 
+  // 组件卸载时清理定时器
+  onUnmounted(() => {
+    stopPolling()
+  })
+
   return {
-    // 状态
-    currentTaskId,
-    generationStatus,
-    slidesResults,
     isGenerating,
-    pollStatus,
-
-    // 计算属性
-    progress,
-    hasProcessingSlides,
-    completedSlidesCount,
-
-    // 方法
+    currentTaskId,
     startGeneration,
     stopGeneration,
     regenerateSlide,
-    pollGenerationStatus,
-    reset
+    getCurrentStatus,
+    stopPolling,
   }
 }

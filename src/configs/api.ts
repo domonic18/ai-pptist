@@ -129,6 +129,20 @@ export const API_CONFIG = {
     BATCH: '/api/v1/annotation/batch',
   },
 
+  // Banana生成相关API
+  BANANA_GENERATION: {
+    // 批量生成幻灯片图片
+    GENERATE_BATCH_SLIDES: '/api/v1/banana_generation/generate_batch_slides',
+    // 查询生成状态
+    GENERATION_STATUS: (taskId: string) => `/api/v1/banana_generation/generation_status/${taskId}`,
+    // 停止生成任务
+    STOP_GENERATION: (taskId: string) => `/api/v1/banana_generation/stop_generation/${taskId}`,
+    // 重新生成单页
+    REGENERATE_SLIDE: '/api/v1/banana_generation/regenerate_slide',
+    // 获取模板列表
+    TEMPLATES: '/api/v1/banana_generation/templates',
+  },
+
   // 其他API端点可以根据需要继续添加
 } as const
 

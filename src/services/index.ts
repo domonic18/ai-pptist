@@ -15,7 +15,7 @@ interface OutlineGenerationRequest {
   input_content: string
   slide_count?: number
   language?: string
-  ai_model_config?: any
+  ai_model_id?: string
 }
 
 interface AIPPTPayload {
