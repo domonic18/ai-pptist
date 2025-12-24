@@ -20,7 +20,8 @@ export interface FontInfo {
   size: number
   family: string
   weight: 'normal' | 'bold'
-  color?: string
+  color: string
+  align: 'left' | 'center' | 'right'
 }
 
 /**

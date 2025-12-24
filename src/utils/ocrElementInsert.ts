@@ -8,10 +8,6 @@ import { useMainStore, useSlidesStore } from '@/store'
 import type { PPTShapeElement, PPTTextElement, PPTImageElement } from '@/types/slides'
 import type { TextRegion } from '@/types/imageParsing'
 
-// OCR图片的标准分辨率（香蕉生成PPT固定使用1920x1080）
-const OCR_IMAGE_WIDTH = 1920
-const OCR_IMAGE_HEIGHT = 1080
-
 // 矩形形状的路径配置（复用shapes.ts中的配置）
 const RECT_SHAPE = {
   viewBox: [200, 200] as [number, number],
@@ -36,13 +32,26 @@ export function insertOCRElementsAsEditable(regions: TextRegion[], taskId: strin
     return
   }
 
-  // 获取当前画布尺寸
+  // 获取当前画布尺寸（前端viewport尺寸）
   const viewportWidth = slidesStore.viewportSize
   const viewportHeight = slidesStore.viewportSize * slidesStore.viewportRatio
 
+  // 获取OCR识别时的图片尺寸（与生成图片时的canvas_size一致）
+  // 生成图片时的canvas_size: { width: Math.round(viewportSize), height: Math.round(viewportSize * viewportRatio) }
+  // 因此，OCR识别的坐标系统应该基于这个尺寸
+  const ocrImageWidth = Math.round(viewportWidth)
+  const ocrImageHeight = Math.round(viewportHeight)
+
   // 计算坐标换算比例
-  const scaleX = viewportWidth / OCR_IMAGE_WIDTH
-  const scaleY = viewportHeight / OCR_IMAGE_HEIGHT
+  // 注意：由于OCR图片尺寸与画布尺寸一致（都基于viewportSize），scaleX和scaleY应该都接近1.0
+  const scaleX = viewportWidth / ocrImageWidth
+  const scaleY = viewportHeight / ocrImageHeight
+
+  console.log('[OCR坐标转换]', {
+    viewportSize: { width: viewportWidth, height: viewportHeight },
+    ocrImageSize: { width: ocrImageWidth, height: ocrImageHeight },
+    scale: { x: scaleX, y: scaleY }
+  })
 
   // 遍历所有文字区域
   for (const region of regions) {
@@ -78,7 +87,22 @@ export function insertOCRElementsAsEditable(regions: TextRegion[], taskId: strin
     }
 
     // 2) 创建可编辑文字元素（覆盖在遮罩之上）
-    // 注意：字体大小等信息需要通过编辑器样式面板调整
+    // 使用多模态OCR模型提供的字体信息
+    const font = region.font
+    const fontSize = font?.size || 16
+    const fontFamily = font?.family || slidesStore.theme.fontName
+    const fontWeight = font?.weight || 'normal'
+    const color = font?.color || '#000000'
+    const textAlign = font?.align || 'left'
+
+    // 构建带样式的HTML内容
+    const style = [
+      `text-align: ${textAlign}`,
+      `font-size: ${fontSize}px`,
+      `color: ${color}`,
+      `font-weight: ${fontWeight}`,
+    ].join('; ')
+
     const textEl: PPTTextElement = {
       type: 'text',
       id: textId,
@@ -88,9 +112,9 @@ export function insertOCRElementsAsEditable(regions: TextRegion[], taskId: strin
       width: width,
       height: height,
       rotate: 0,
-      content: region.text,
-      defaultFontName: region.font?.family || slidesStore.theme.fontName,
-      defaultColor: '#000000',
+      content: `<p style="${style}">${region.text}</p>`,
+      defaultFontName: fontFamily,
+      defaultColor: color,
     }
 
     // 插入元素（先插入遮罩，再插入文字，确保文字在上层）
