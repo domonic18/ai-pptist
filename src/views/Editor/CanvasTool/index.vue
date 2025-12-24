@@ -321,7 +321,14 @@ const parseImage = async () => {
     )
 
     // 插入可编辑元素
-    insertOCRElementsAsEditable(result.text_regions, result.task_id)
+    insertOCRElementsAsEditable(result.text_regions, result.task_id, {
+      cosKey,
+      source,
+      ocrImageSize: result?.metadata?.image_width && result?.metadata?.image_height
+        ? { width: result.metadata.image_width, height: result.metadata.image_height }
+        : undefined,
+      objectFit: 'cover',
+    })
 
     message.success(`解析完成！识别到 ${result.metadata.text_count} 个文字区域`)
 
