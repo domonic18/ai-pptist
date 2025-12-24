@@ -11,6 +11,10 @@
               <IconMagic class="icon" />
               优化幻灯片
             </PopoverMenuItem>
+            <PopoverMenuItem center @click="parseImage(); moreVisible = false">
+              <IconFontSize class="icon" />
+              解析图片
+            </PopoverMenuItem>
             <PopoverMenuItem center @click="toggleNotesPanel(); moreVisible = false">批注面板</PopoverMenuItem>
             <PopoverMenuItem center @click="toggleSelectPanel(); moreVisible = false">选择窗格</PopoverMenuItem>
             <PopoverMenuItem center @click="toggleSraechPanel(); moreVisible = false">查找替换</PopoverMenuItem>
@@ -21,6 +25,7 @@
         <IconMoveOne class="handler-item" :class="{ 'active': showSelectPanel }" v-tooltip="'选择窗格'" @click="toggleSelectPanel()" />
         <IconSearch class="handler-item" :class="{ 'active': showSearchPanel }" v-tooltip="'查找/替换（Ctrl + F）'" @click="toggleSraechPanel()" />
         <IconMagic class="handler-item" :class="{ 'active': optimizeSlideDialogVisible }" v-tooltip="'优化幻灯片'" @click="openOptimizeSlideDialog()" />
+        <IconFontSize class="handler-item" :class="{ 'active': parsingImage }" v-tooltip="'解析图片（OCR）'" @click="parseImage()" />
       </div>
     </div>
 
@@ -140,6 +145,7 @@ import type { LinePoolItem } from '@/configs/lines'
 import useScaleCanvas from '@/hooks/useScaleCanvas'
 import useHistorySnapshot from '@/hooks/useHistorySnapshot'
 import useCreateElement from '@/hooks/useCreateElement'
+import message from '@/utils/message'
 
 import ShapePool from './ShapePool.vue'
 import LinePool from './LinePool.vue'
@@ -260,6 +266,71 @@ const toggleSymbolPanel = () => {
 // 打开优化幻灯片对话框
 const openOptimizeSlideDialog = () => {
   optimizeSlideDialogVisible.value = true
+}
+
+// 图片解析功能
+import imageParsingService from '@/services/imageParsingService'
+import {
+  insertOCRElementsAsEditable,
+  hasImageForOCR,
+  getImageCOSKeyForOCR,
+  getSlideId
+} from '@/utils/ocrElementInsert'
+
+const parsingImage = ref(false)
+
+/**
+ * 解析当前幻灯片图片中的文字
+ */
+const parseImage = async () => {
+  // 检查是否有可识别的图片（优先使用选中的图片元素）
+  if (!hasImageForOCR()) {
+    message.warning('请先选中一张图片，或确保幻灯片有背景图片')
+    return
+  }
+
+  // 获取图片COS Key
+  const imageInfo = getImageCOSKeyForOCR()
+  if (!imageInfo) {
+    message.error('无法获取图片信息')
+    return
+  }
+
+  const { cosKey, source } = imageInfo
+
+  // 根据图片来源显示不同的提示信息
+  const sourceText = source === 'selected' ? '选中的图片' : '背景图片'
+
+  // 获取幻灯片ID
+  const slideId = getSlideId()
+
+  try {
+    parsingImage.value = true
+    message.info(`正在解析${sourceText}...`)
+
+    // 调用解析API
+    const response = await imageParsingService.parseSlideImage(slideId, cosKey)
+
+    // 轮询获取结果
+    const result = await imageParsingService.pollParsingResult(
+      response.task_id,
+      (progress, status) => {
+        // 进度回调（可选：可以在UI上显示进度）
+        console.log(`解析进度: ${progress}%`)
+      }
+    )
+
+    // 插入可编辑元素
+    insertOCRElementsAsEditable(result.text_regions, result.task_id)
+
+    message.success(`解析完成！识别到 ${result.metadata.text_count} 个文字区域`)
+
+  } catch (error: any) {
+    message.error(`解析失败：${error.message || '未知错误'}`)
+    console.error('图片解析失败:', error)
+  } finally {
+    parsingImage.value = false
+  }
 }
 </script>
 

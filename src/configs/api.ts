@@ -145,6 +145,14 @@ export const API_CONFIG = {
     TEMPLATES: '/api/v1/banana_generation/templates',
   },
 
+  // 图片解析相关API
+  IMAGE_PARSING: {
+    // 解析图片中的文字
+    PARSE: '/api/v1/image_parsing/parse',
+    // 查询解析状态
+    STATUS: (taskId: string) => `/api/v1/image_parsing/status/${taskId}`,
+  },
+
   // 其他API端点可以根据需要继续添加
 } as const
 

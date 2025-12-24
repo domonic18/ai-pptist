@@ -20,7 +20,7 @@
         正在生成中...
       </div>
       <div v-else-if="allCompleted" class="progress-status success">
-        <el-icon><CheckCircle /></el-icon>
+        <el-icon><Check /></el-icon>
         生成完成
       </div>
     </div>
@@ -139,13 +139,13 @@ import {
 } from 'element-plus'
 import {
   Loading,
-  CheckCircle,
+  Check,
   Picture,
   Warning,
   Document,
   DocumentCopy
 } from '@element-plus/icons-vue'
-import type { SlideGenerationResult, Template } from '@/types/banana-generation'
+import type { SlideGenerationResult, BananaTemplate } from '@/types/banana-generation'
 import bananaGenerationService from '@/services/bananaGenerationService'
 
 interface Emits {
@@ -158,7 +158,6 @@ interface Emits {
 export interface ProgressDialogProps {
   visible: boolean
   taskId: string
-  templates: Template[]
   slides: SlideGenerationResult[]
   isGenerating: boolean
 }
@@ -323,10 +322,7 @@ const getStatusText = (status: string) => {
  */
 const handleRegenerate = async (slideIndex: number) => {
   try {
-    await bananaGenerationService.regenerateSlide({
-      task_id: props.taskId,
-      slide_index: slideIndex
-    })
+    await bananaGenerationService.regenerateSlide(props.taskId, slideIndex)
 
     ElMessage.success('重新生成已启动')
   } catch (error: any) {

@@ -272,6 +272,7 @@ export const useSlidesStore = defineStore('slides', {
         height: this.viewportSize * this.viewportRatio,
         src: imageUrl,
         fixedRatio: true,
+        rotate: 0,
       }
 
       // 更新幻灯片

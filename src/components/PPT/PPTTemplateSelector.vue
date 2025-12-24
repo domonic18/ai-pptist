@@ -86,7 +86,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import type { PropType } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Check,
   Picture,
@@ -148,12 +148,7 @@ const loadTemplates = async () => {
   loading.value = true
   try {
     const response = await bananaGenerationService.getTemplates()
-
-    if (response.success) {
-      templates.value = response.data?.templates || []
-    } else {
-      ElMessage.error('加载模板失败：' + (response.error?.message || '未知错误'))
-    }
+    templates.value = response.templates || []
   } catch (error: any) {
     console.error('加载模板失败:', error)
     ElMessage.error('加载模板失败：' + error.message)
