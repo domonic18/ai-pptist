@@ -19,7 +19,7 @@ export const imageParsingService = {
   /**
    * 解析图片中的文字
    * @param slideId 幻灯片ID
-   * @param cosKey 图片COS Key
+   * @param cosKey 图片的COS Key
    * @returns 解析任务响应
    */
   async parseSlideImage(

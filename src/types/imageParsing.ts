@@ -61,7 +61,7 @@ export interface ParseTaskResponse {
 export interface ParseStatusResponse {
   task_id: string
   slide_id: string
-  cos_key: string
+  cos_key?: string
   status: 'pending' | 'processing' | 'completed' | 'failed'
   progress: number
   current_step?: string
@@ -76,7 +76,7 @@ export interface ParseStatusResponse {
 export interface ImageParseResult {
   task_id: string
   slide_id: string
-  cos_key: string
+  cos_key?: string
   status: 'pending' | 'processing' | 'completed' | 'failed'
   progress: number
   text_regions: TextRegion[]

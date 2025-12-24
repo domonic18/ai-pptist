@@ -289,7 +289,7 @@ const parseImage = async () => {
     return
   }
 
-  // 获取图片COS Key
+  // 获取图片的 COS Key
   const imageInfo = getImageCOSKeyForOCR()
   if (!imageInfo) {
     message.error('无法获取图片信息')
@@ -308,7 +308,7 @@ const parseImage = async () => {
     parsingImage.value = true
     message.info(`正在解析${sourceText}...`)
 
-    // 调用解析API
+    // 调用解析API（传递 cos_key，后端负责下载和转码）
     const response = await imageParsingService.parseSlideImage(slideId, cosKey)
 
     // 轮询获取结果
@@ -325,10 +325,12 @@ const parseImage = async () => {
 
     message.success(`解析完成！识别到 ${result.metadata.text_count} 个文字区域`)
 
-  } catch (error: any) {
+  }
+  catch (error: any) {
     message.error(`解析失败：${error.message || '未知错误'}`)
     console.error('图片解析失败:', error)
-  } finally {
+  }
+  finally {
     parsingImage.value = false
   }
 }

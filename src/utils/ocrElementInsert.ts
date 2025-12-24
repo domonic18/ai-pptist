@@ -177,6 +177,28 @@ export function getSelectedImageCOSKey(): string | undefined {
 }
 
 /**
+ * 获取选中图片的URL
+ * @returns URL或undefined
+ */
+export function getSelectedImageSrc(): string | undefined {
+  const imageElement = getSelectedImageElement()
+  return imageElement?.src
+}
+
+/**
+ * 获取背景图片URL
+ * @returns URL或undefined
+ */
+export function getBackgroundImageSrc(): string | undefined {
+  const slidesStore = useSlidesStore()
+  const currentSlide = slidesStore.currentSlide
+  if (currentSlide?.background?.type === 'image') {
+    return currentSlide.background.image?.src
+  }
+  return undefined
+}
+
+/**
  * 检查是否有可进行OCR的图片（背景图片或选中的图片元素）
  * @returns 是否有可识别的图片
  */
@@ -196,19 +218,44 @@ export function hasImageForOCR(): boolean {
 
 /**
  * 获取用于OCR的图片COS Key
- * @returns COS Key或undefined
+ * 后端将使用此Key从COS获取图片
+ * @returns COS Key和来源信息，或undefined
  */
 export function getImageCOSKeyForOCR(): { cosKey: string; source: 'selected' | 'background' } | undefined {
-  // 优先使用选中的图片元素
-  const selectedCosKey = getSelectedImageCOSKey()
-  if (selectedCosKey) {
-    return { cosKey: selectedCosKey, source: 'selected' }
+  const mainStore = useMainStore()
+  const slidesStore = useSlidesStore()
+  
+  // 优先获取选中的图片元素
+  const imageElement = getSelectedImageElement()
+  if (imageElement && imageElement.imageInfo?.cosKey) {
+    return {
+      cosKey: imageElement.imageInfo.cosKey,
+      source: 'selected'
+    }
   }
 
-  // 使用背景图片
-  const bgCosKey = getBackgroundImageCOSKey()
-  if (bgCosKey) {
-    return { cosKey: bgCosKey, source: 'background' }
+  // 尝试使用选中图片的 src（如果它本身就是 cos_key 格式）
+  if (imageElement && imageElement.src) {
+    // 检查 src 是否为 cos_key 格式 (通常以 ai-generated/ 或 images/ 开头)
+    const src = imageElement.src
+    if (!src.startsWith('http') && !src.startsWith('data:') && !src.startsWith('/api/')) {
+      return {
+        cosKey: src,
+        source: 'selected'
+      }
+    }
+  }
+
+  // 获取背景图片的 cos_key
+  const currentSlide = slidesStore.currentSlide
+  if (currentSlide?.background?.type === 'image') {
+    const bgSrc = currentSlide.background.image?.src
+    if (bgSrc && !bgSrc.startsWith('http') && !bgSrc.startsWith('data:') && !bgSrc.startsWith('/api/')) {
+      return {
+        cosKey: bgSrc,
+        source: 'background'
+      }
+    }
   }
 
   return undefined
