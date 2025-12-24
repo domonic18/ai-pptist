@@ -2,12 +2,30 @@
   <div class="aippt-dialog">
     <div class="header">
       <span class="title">AIPPT</span>
+      <!-- 标签切换 - 仅在setup步骤显示 -->
+      <div class="mode-tabs" v-if="step === 'setup'">
+        <div
+          class="tab-item"
+          :class="{ active: inputMode === 'text' }"
+          @click="handleModeChange('text')"
+        >
+          文本输入
+        </div>
+        <div
+          class="tab-item"
+          :class="{ active: inputMode === 'upload' }"
+          @click="handleModeChange('upload')"
+        >
+          上传文件
+        </div>
+      </div>
       <span class="subtite" v-if="step === 'template'">从下方挑选合适的模板生成PPT，或<span class="local" v-tooltip="'上传.pptist格式模板文件'" @click="uploadLocalTemplate()">使用本地模板生成</span></span>
       <span class="subtite" v-else-if="step === 'outline'">确认下方内容大纲（点击编辑内容，右键添加/删除大纲项），开始选择模板</span>
-      <span class="subtite" v-else>在下方输入您的PPT主题，并适当补充信息，如行业、岗位、学科、用途等</span>
+      <span class="subtite" v-else-if="step === 'setup' && inputMode === 'text'">在下方输入您的PPT主题，并适当补充信息，如行业、岗位、学科、用途等</span>
+      <span class="subtite" v-else-if="step === 'setup' && inputMode === 'upload'">上传.md格式的Markdown文件，自动解析为PPT大纲</span>
     </div>
     
-    <template v-if="step === 'setup'">
+    <template v-if="step === 'setup' && inputMode === 'text'">
       <Input class="input" 
         ref="inputRef"
         v-model:value="keyword" 
@@ -81,6 +99,59 @@
         </div>
       </div>
     </template>
+
+    <!-- 文件上传模式 -->
+    <template v-if="step === 'setup' && inputMode === 'upload'">
+      <!-- 未上传状态 -->
+      <div v-if="!isFileUploaded" class="upload-area">
+        <FileInput accept=".md" @change="handleFileUpload">
+          <div class="upload-zone">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">拖拽文件到此处或点击上传</div>
+            <div class="upload-hint">支持 .md 格式，文件大小不超过 5MB</div>
+          </div>
+        </FileInput>
+      </div>
+
+      <!-- 已上传状态 -->
+      <div v-else class="file-info-card">
+        <div class="file-header">
+          <div class="file-icon">📄</div>
+          <div class="file-details">
+            <div class="file-name">{{ uploadedFile?.name }}</div>
+            <div class="file-meta">
+              {{ formatFileSize(uploadedFile?.size || 0) }}
+              · {{ slideCountFromFile }} 页
+            </div>
+          </div>
+          <Button class="reupload-btn" @click="handleReupload">
+            重新上传
+          </Button>
+        </div>
+
+        <!-- 大纲预览 -->
+        <div class="outline-preview">
+          <div class="preview-header">大纲预览</div>
+          <div class="preview-content">
+            {{ getOutlinePreview(uploadedFileContent) }}
+          </div>
+        </div>
+
+        <div class="action-btns">
+          <Button class="btn" type="primary" @click="proceedToOutline">
+            编辑大纲并生成
+          </Button>
+          <Button class="btn" @click="handleReupload">
+            重新上传
+          </Button>
+        </div>
+      </div>
+
+      <!-- 错误提示 -->
+      <div v-if="fileParseError" class="error-message">
+        {{ fileParseError }}
+      </div>
+    </template>
     <div class="preview" v-if="step === 'outline'">
       <pre ref="outlineRef" v-if="outlineCreating">{{ outline }}</pre>
        <div class="outline-view" v-else>
@@ -92,7 +163,12 @@
           香蕉生成
         </Button>
         <Button class="btn" type="primary" @click="step = 'template'">选择模板</Button>
-        <Button class="btn" @click="outline = ''; step = 'setup'">返回重新生成</Button>
+        <Button class="btn" @click="handleBackToSetup">返回重新生成</Button>
+      </div>
+
+      <!-- 来源文件信息 -->
+      <div v-if="inputMode === 'upload' && isFileUploaded" class="source-file-info">
+        <span>来源文件: {{ uploadedFile?.name }}</span>
       </div>
     </div>
     <div class="select-template" v-if="step === 'template'">
@@ -135,7 +211,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, useTemplateRef } from 'vue'
+import { ref, computed, onMounted, useTemplateRef } from 'vue'
 import { storeToRefs } from 'pinia'
 import useOutlineGeneration from '@/hooks/useOutlineGeneration'
 import usePPTCreation from '@/hooks/usePPTCreation'
@@ -153,8 +229,10 @@ import BananaProgressDialog from '@/components/BananaProgressDialog.vue'
 import apiService from '@/services'
 import { bananaGenerationService } from '@/services/bananaGenerationService'
 import useBananaGeneration from '@/hooks/useBananaGeneration'
-import { validateOutlineData } from '@/utils/outlineParser'
+import { validateOutlineData, parseOutlineFromMarkdown } from '@/utils/outlineParser'
 import type { OutlineData } from '@/types/banana-generation'
+import FileInput from '@/components/FileInput.vue'
+import { formatFileSize, getOutlinePreview, countSlides, isMarkdownFile, readFileAsText } from '@/utils/fileUtils'
 
 const mainStore = useMainStore()
 const slideStore = useSlidesStore()
@@ -193,6 +271,21 @@ const {
 
 const loading = ref(false)
 const loadingTip = ref('AI生成中，请耐心等待 ...')
+
+// 输入模式切换
+const inputMode = ref<'text' | 'upload'>('text')
+
+// 文件上传相关状态
+const uploadedFile = ref<File | null>(null)
+const uploadedFileContent = ref('')
+const isFileUploaded = ref(false)
+const fileParseError = ref('')
+
+// 计算幻灯片数量
+const slideCountFromFile = computed(() => {
+  return countSlides(uploadedFileContent.value)
+})
+
 const showBananaTemplateSelector = ref(false)
 const showProgressDialog = ref(false)
 const generationStatus = ref<any>(null)
@@ -471,6 +564,91 @@ const handleRegenerateSlide = async (slideIndex: number) => {
   // 重新开始轮询
   pollGenerationStatusForDialog()
 }
+
+// ========== 文件上传相关方法 ==========
+
+// 处理标签切换
+const handleModeChange = (mode: 'text' | 'upload') => {
+  inputMode.value = mode
+  // 切换模式时清理错误状态
+  fileParseError.value = ''
+}
+
+// 处理文件上传
+const handleFileUpload = async (files: FileList) => {
+  const file = files[0]
+  if (!file) return
+
+  // 验证文件类型
+  if (!isMarkdownFile(file)) {
+    message.error('仅支持上传 .md 格式的文件')
+    return
+  }
+
+  // 验证文件大小（5MB限制）
+  const maxSize = 5 * 1024 * 1024
+  if (file.size > maxSize) {
+    message.error('文件大小不能超过 5MB')
+    return
+  }
+
+  loading.value = true
+  loadingTip.value = '正在解析文件...'
+  fileParseError.value = ''
+
+  try {
+    const content = await readFileAsText(file)
+
+    // 验证是否为有效的大纲格式
+    const outlineData = parseOutlineFromMarkdown(content)
+    if (!outlineData || !validateOutlineData(outlineData)) {
+      throw new Error('文件格式不符合PPT大纲要求，请确保包含正确的标题和列表格式')
+    }
+
+    uploadedFile.value = file
+    uploadedFileContent.value = content
+    isFileUploaded.value = true
+
+    message.success(`文件解析成功，共 ${outlineData.slides.length} 页`)
+  }
+  catch (error: any) {
+    fileParseError.value = error.message || '文件解析失败'
+    message.error(`文件解析失败: ${error.message}`)
+  }
+  finally {
+    loading.value = false
+  }
+}
+
+// 重新上传
+const handleReupload = () => {
+  uploadedFile.value = null
+  uploadedFileContent.value = ''
+  isFileUploaded.value = false
+  fileParseError.value = ''
+}
+
+// 从文件上传进入大纲编辑
+const proceedToOutline = () => {
+  if (!uploadedFileContent.value) {
+    message.warning('请先上传文件')
+    return
+  }
+  outline.value = uploadedFileContent.value
+  step.value = 'outline'
+}
+
+// 返回重新生成
+const handleBackToSetup = () => {
+  outline.value = ''
+  if (inputMode.value === 'upload') {
+    // 文件上传模式，返回到上传状态
+    step.value = 'setup'
+  } else {
+    // 文本输入模式，清空并返回
+    step.value = 'setup'
+  }
+}
 </script>
 
 <style lang="scss" scoped>
@@ -650,6 +828,167 @@ const handleRegenerateSlide = async (slideIndex: number) => {
     font-size: 15px;
     margin-right: 3px;
   }
+}
+
+// ========== 标签切换样式 ==========
+.mode-tabs {
+  display: flex;
+  gap: 4px;
+  background: #f5f5f5;
+  padding: 4px;
+  border-radius: 8px;
+  margin-left: 16px;
+
+  .tab-item {
+    padding: 8px 16px;
+    font-size: 14px;
+    color: #666;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.3s;
+    user-select: none;
+
+    &.active {
+      background: #fff;
+      color: $themeColor;
+      font-weight: 500;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    &:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.5);
+    }
+  }
+}
+
+// ========== 文件上传样式 ==========
+.upload-area {
+  margin-top: 20px;
+
+  .upload-zone {
+    border: 2px dashed #ddd;
+    border-radius: 12px;
+    padding: 60px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+
+    &:hover {
+      border-color: $themeColor;
+      background: rgba($color: $themeColor, $alpha: 0.02);
+    }
+
+    .upload-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .upload-text {
+      font-size: 16px;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .upload-hint {
+      font-size: 13px;
+      color: #999;
+    }
+  }
+}
+
+.file-info-card {
+  background: #f9f9f9;
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 20px;
+
+  .file-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e5e5e5;
+    margin-bottom: 16px;
+
+    .file-icon {
+      font-size: 32px;
+    }
+
+    .file-details {
+      flex: 1;
+
+      .file-name {
+        font-size: 15px;
+        font-weight: 500;
+        color: #333;
+        margin-bottom: 4px;
+      }
+
+      .file-meta {
+        font-size: 13px;
+        color: #999;
+      }
+    }
+
+    .reupload-btn {
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+  }
+
+  .outline-preview {
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+
+    .preview-header {
+      font-size: 13px;
+      font-weight: 500;
+      color: #666;
+      margin-bottom: 12px;
+    }
+
+    .preview-content {
+      font-size: 13px;
+      color: #666;
+      line-height: 1.8;
+      max-height: 200px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  }
+
+  .action-btns {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+
+    .btn {
+      min-width: 120px;
+    }
+  }
+}
+
+.source-file-info {
+  padding: 8px 16px;
+  background: rgba($color: $themeColor, $alpha: 0.05);
+  border-radius: 4px;
+  font-size: 13px;
+  color: #666;
+  margin-top: 12px;
+  text-align: center;
+}
+
+.error-message {
+  padding: 12px 16px;
+  background: #fff1f0;
+  border: 1px solid #ffccc7;
+  border-radius: 8px;
+  color: #ff4d4f;
+  font-size: 14px;
+  margin-top: 16px;
 }
 
 @media screen and (width <= 800px) {
