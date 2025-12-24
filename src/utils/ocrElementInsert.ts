@@ -8,10 +8,79 @@ import { useMainStore, useSlidesStore } from '@/store'
 import type { PPTShapeElement, PPTTextElement, PPTImageElement } from '@/types/slides'
 import type { TextRegion } from '@/types/imageParsing'
 
+type Rect = { left: number; top: number; width: number; height: number }
+type OcrInsertOptions = {
+  /**
+   * 本次OCR所对应的图片cosKey（用于在slide.elements中定位图片元素）
+   */
+  cosKey?: string
+  /**
+   * OCR来源：选中图片 or 背景图片
+   */
+  source?: 'selected' | 'background'
+  /**
+   * OCR识别所用“原图”的实际像素尺寸（后端PIL检测得到）
+   */
+  ocrImageSize?: { width: number; height: number }
+  /**
+   * 与SmartImage保持一致：object-fit: cover + object-position: center
+   */
+  objectFit?: 'cover' | 'contain'
+}
+
 // 矩形形状的路径配置（复用shapes.ts中的配置）
 const RECT_SHAPE = {
   viewBox: [200, 200] as [number, number],
   path: 'M 0 0 L 200 0 L 200 200 L 0 200 Z',
+}
+
+function find_image_element_by_cos_key(elements: any[], cosKey: string): PPTImageElement | undefined {
+  for (const el of elements) {
+    if (el?.type !== 'image') continue
+    const img = el as PPTImageElement
+    if (img?.imageInfo?.cosKey === cosKey) return img
+  }
+  return undefined
+}
+
+function map_bbox_to_target_rect(
+  bbox: { x: number; y: number; width: number; height: number },
+  target: Rect,
+  srcImage: { width: number; height: number },
+  objectFit: 'cover' | 'contain'
+): Rect {
+  const srcW = srcImage.width
+  const srcH = srcImage.height
+  const dstW = target.width
+  const dstH = target.height
+
+  if (srcW <= 0 || srcH <= 0 || dstW <= 0 || dstH <= 0) {
+    // fallback：不做映射
+    return {
+      left: target.left + bbox.x,
+      top: target.top + bbox.y,
+      width: bbox.width,
+      height: bbox.height,
+    }
+  }
+
+  // SmartImage默认：object-position: center
+  const scale =
+    objectFit === 'cover'
+      ? Math.max(dstW / srcW, dstH / srcH)
+      : Math.min(dstW / srcW, dstH / srcH)
+
+  const renderedW = srcW * scale
+  const renderedH = srcH * scale
+  const offsetX = (renderedW - dstW) / 2
+  const offsetY = (renderedH - dstH) / 2
+
+  return {
+    left: target.left + bbox.x * scale - offsetX,
+    top: target.top + bbox.y * scale - offsetY,
+    width: bbox.width * scale,
+    height: bbox.height * scale,
+  }
 }
 
 /**
@@ -22,7 +91,11 @@ const RECT_SHAPE = {
  * @param regions OCR识别的文字区域列表
  * @param taskId 任务ID（用于生成唯一ID）
  */
-export function insertOCRElementsAsEditable(regions: TextRegion[], taskId: string) {
+export function insertOCRElementsAsEditable(
+  regions: TextRegion[],
+  taskId: string,
+  options: OcrInsertOptions = {}
+) {
   const mainStore = useMainStore()
   const slidesStore = useSlidesStore()
   const currentSlide = slidesStore.currentSlide
@@ -32,25 +105,36 @@ export function insertOCRElementsAsEditable(regions: TextRegion[], taskId: strin
     return
   }
 
-  // 获取当前画布尺寸（前端viewport尺寸）
   const viewportWidth = slidesStore.viewportSize
   const viewportHeight = slidesStore.viewportSize * slidesStore.viewportRatio
 
-  // 获取OCR识别时的图片尺寸（与生成图片时的canvas_size一致）
-  // 生成图片时的canvas_size: { width: Math.round(viewportSize), height: Math.round(viewportSize * viewportRatio) }
-  // 因此，OCR识别的坐标系统应该基于这个尺寸
-  const ocrImageWidth = Math.round(viewportWidth)
-  const ocrImageHeight = Math.round(viewportHeight)
+  const objectFit = options.objectFit ?? 'cover'
 
-  // 计算坐标换算比例
-  // 注意：由于OCR图片尺寸与画布尺寸一致（都基于viewportSize），scaleX和scaleY应该都接近1.0
-  const scaleX = viewportWidth / ocrImageWidth
-  const scaleY = viewportHeight / ocrImageHeight
+  // 目标映射矩形：默认全画布；若是选中图片，尽量定位对应图片元素的矩形
+  let targetRect: Rect = { left: 0, top: 0, width: viewportWidth, height: viewportHeight }
 
-  console.log('[OCR坐标转换]', {
-    viewportSize: { width: viewportWidth, height: viewportHeight },
-    ocrImageSize: { width: ocrImageWidth, height: ocrImageHeight },
-    scale: { x: scaleX, y: scaleY }
+  if (options.source === 'selected') {
+    let targetImg: PPTImageElement | undefined
+    if (options.cosKey) {
+      targetImg = find_image_element_by_cos_key(currentSlide.elements as any[], options.cosKey)
+    }
+    if (!targetImg) {
+      targetImg = getSelectedImageElement()
+    }
+    if (targetImg) {
+      targetRect = { left: targetImg.left, top: targetImg.top, width: targetImg.width, height: targetImg.height }
+    }
+  }
+
+  // 原图尺寸：优先使用后端PIL检测值；否则退化为“目标矩形尺寸”
+  const srcImageSize = options.ocrImageSize?.width && options.ocrImageSize?.height
+    ? { width: options.ocrImageSize.width, height: options.ocrImageSize.height }
+    : { width: targetRect.width, height: targetRect.height }
+
+  console.log('[OCR坐标映射]', {
+    objectFit,
+    srcImageSize,
+    targetRect,
   })
 
   // 遍历所有文字区域
@@ -58,11 +142,11 @@ export function insertOCRElementsAsEditable(regions: TextRegion[], taskId: strin
     // 生成唯一的groupId，将遮罩和文字绑定在一起
     const groupId = `ocr_group_${taskId}_${region.id}`
 
-    // 将OCR坐标转换为幻灯片坐标
-    const left = region.bbox.x * scaleX
-    const top = region.bbox.y * scaleY
-    const width = region.bbox.width * scaleX
-    const height = region.bbox.height * scaleY
+    const mapped = map_bbox_to_target_rect(region.bbox, targetRect, srcImageSize, objectFit)
+    const left = mapped.left
+    const top = mapped.top
+    const width = mapped.width
+    const height = mapped.height
 
     // 生成遮罩和文字元素的ID
     const maskId = `ocr_mask_${taskId}_${region.id}`

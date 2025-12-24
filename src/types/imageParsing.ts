@@ -42,6 +42,8 @@ export interface ParseMetadata {
   parse_time: number
   ocr_engine: string
   text_count: number
+  image_width?: number
+  image_height?: number
   created_at: string
   completed_at?: string
 }
