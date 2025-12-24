@@ -79,20 +79,6 @@
             placeholder="选择AI模型"
           />
         </div>
-        <div class="config-item">
-          <div class="label">配图：</div>
-          <Select
-            class="config-content"
-            style="width: 100px;"
-            v-model:value="img"
-            :options="[
-              { label: '无', value: '' },
-              { label: '模拟测试', value: 'test' },
-              { label: 'AI搜图', value: 'ai-search', disabled: true },
-              { label: 'AI生图', value: 'ai-create', disabled: true },
-            ]"
-          />
-        </div>
       </div>
     </template>
     <div class="preview" v-if="step === 'outline'">
@@ -126,7 +112,7 @@
       </div>
     </div>
 
-    <FullscreenSpin :loading="loading" tip="AI生成中，请耐心等待 ..." />
+    <FullscreenSpin :loading="loading" :tip="loadingTip" />
 
     <!-- 香蕉模板选择对话框 -->
     <BananaTemplateSelector
@@ -206,6 +192,7 @@ const {
 } = useBananaGeneration()
 
 const loading = ref(false)
+const loadingTip = ref('AI生成中，请耐心等待 ...')
 const showBananaTemplateSelector = ref(false)
 const showProgressDialog = ref(false)
 const generationStatus = ref<any>(null)
@@ -289,14 +276,14 @@ onMounted(() => {
 const recommends = ref([
   '2025科技前沿动态',
   '大数据如何改变世界',
-  '餐饮市场调查与研究',
   'AIGC在教育领域的应用',
-  '社交媒体与品牌营销',
   '5G技术如何改变我们的生活',
   '年度工作总结与展望',
-  '区块链技术及其应用',
   '大学生职业生涯规划',
-  '公司年会策划方案',
+  '小学三年级数学数字大小',
+  '初中物理力学基础',
+  '高中化学元素周期表',
+  '幼儿园英语动物认知',
 ]) 
 
 onMounted(() => {
@@ -314,6 +301,7 @@ const createOutline = async () => {
   if (!keyword.value) return message.error('请先输入PPT主题')
 
   loading.value = true
+  loadingTip.value = 'AI生成大纲中，请耐心等待 ...'
 
   const success = await generateOutline({
     title: keyword.value,
@@ -332,6 +320,7 @@ const createOutline = async () => {
 
 const createPPT = async (template?: { slides: Slide[], theme: SlideTheme, width?: number, height?: number }) => {
   loading.value = true
+  loadingTip.value = 'AI生成PPT中，请耐心等待 ...'
 
   const success = await generatePPT({
     content: outline.value,
@@ -383,6 +372,7 @@ const openBananaTemplateSelector = async () => {
   }
 
   loading.value = true
+  loadingTip.value = '正在分析大纲内容，转换为PPT章节结构...'
   try {
     // 1. 调用后端接口拆分大纲
     const result = await bananaGenerationService.splitOutline(outline.value, model.value)

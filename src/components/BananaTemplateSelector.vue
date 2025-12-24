@@ -38,10 +38,6 @@
                 <span class="check-icon">✓</span>
               </div>
             </div>
-            <div class="template-info">
-              <div class="template-name">{{ template.name }}</div>
-              <div class="template-type">{{ template.type === 'system' ? '系统模板' : '用户模板' }}</div>
-            </div>
           </div>
         </div>
       </div>
@@ -288,7 +284,7 @@ onMounted(() => {
   .template-image-wrapper {
     position: relative;
     width: 100%;
-    height: 200px;
+    aspect-ratio: 16 / 9;
     overflow: hidden;
     background: #f5f5f5;
 
@@ -324,27 +320,6 @@ onMounted(() => {
       }
     }
   }
-
-  .template-info {
-    padding: 14px;
-    background: #fff;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-
-    .template-name {
-      font-size: 15px;
-      font-weight: 500;
-      color: #333;
-      margin-bottom: 6px;
-    }
-
-    .template-type {
-      font-size: 12px;
-      color: #999;
-    }
-  }
 }
 
 .loading {
@@ -375,10 +350,6 @@ onMounted(() => {
   .templates-grid {
     grid-template-columns: 1fr;
     gap: 16px;
-  }
-
-  .template-item .template-image-wrapper {
-    height: 160px;
   }
 }
 </style>
