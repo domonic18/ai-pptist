@@ -44,15 +44,16 @@ export function parseOutlineFromMarkdown(markdown: string): OutlineData | null {
       continue
     }
 
-    // 解析幻灯片标题 (二级标题)
-    if (line.startsWith('## ')) {
-      // 保存上一个幻灯片
-      if (currentSlide && currentSlide.points.length > 0) {
+    // 解析幻灯片标题 (支持二级 ## 和三级 ### 标题)
+    if (line.startsWith('## ') || line.startsWith('### ')) {
+      // 如果当前已经有一个幻灯片（即使没有要点，也可能是章节过渡页），保存它
+      if (currentSlide) {
         slides.push(currentSlide)
       }
 
       // 创建新幻灯片
-      const slideTitle = line.substring(3).trim()
+      const level = line.startsWith('### ') ? 3 : 2
+      const slideTitle = line.substring(level + 1).trim()
       currentSlide = {
         title: slideTitle,
         points: [],
@@ -90,7 +91,8 @@ export function parseOutlineFromMarkdown(markdown: string): OutlineData | null {
           }
         }
       }
-    } else if (!title && line) {
+    } 
+    else if (!title && line) {
       // 如果还没有标题，将第一行作为标题
       title = line.replace(/^#+\s*/, '').trim()
     }
@@ -126,7 +128,7 @@ export function validateOutlineData(outline: OutlineData): boolean {
   }
 
   for (const slide of outline.slides) {
-    if (!slide.title || !slide.points || slide.points.length === 0) {
+    if (!slide.title || !slide.points) {
       return false
     }
   }

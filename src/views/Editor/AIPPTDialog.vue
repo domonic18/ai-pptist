@@ -165,8 +165,9 @@ import OutlineEditor from '@/components/OutlineEditor.vue'
 import BananaTemplateSelector from '@/components/BananaTemplateSelector.vue'
 import BananaProgressDialog from '@/components/BananaProgressDialog.vue'
 import apiService from '@/services'
+import { bananaGenerationService } from '@/services/bananaGenerationService'
 import useBananaGeneration from '@/hooks/useBananaGeneration'
-import { parseOutlineFromMarkdown, validateOutlineData } from '@/utils/outlineParser'
+import { validateOutlineData } from '@/utils/outlineParser'
 import type { OutlineData } from '@/types/banana-generation'
 
 const mainStore = useMainStore()
@@ -208,6 +209,7 @@ const loading = ref(false)
 const showBananaTemplateSelector = ref(false)
 const showProgressDialog = ref(false)
 const generationStatus = ref<any>(null)
+const bananaOutlineData = ref<OutlineData | null>(null)
 const imageGenerationModel = ref('')
 const imageModelOptions = ref<Array<{ label: string; value: string }>>([])
 
@@ -369,16 +371,9 @@ const uploadLocalTemplate = () => {
 }
 
 // 打开香蕉模板选择对话框
-const openBananaTemplateSelector = () => {
+const openBananaTemplateSelector = async () => {
   if (!outline.value) {
     message.warning('请先生成大纲')
-    return
-  }
-
-  // 解析大纲
-  const outlineData = parseOutlineFromMarkdown(outline.value)
-  if (!outlineData || !validateOutlineData(outlineData)) {
-    message.error('大纲格式不正确，无法使用香蕉生成')
     return
   }
 
@@ -387,23 +382,42 @@ const openBananaTemplateSelector = () => {
     return
   }
 
-  showBananaTemplateSelector.value = true
+  loading.value = true
+  try {
+    // 1. 调用后端接口拆分大纲
+    const result = await bananaGenerationService.splitOutline(outline.value, model.value)
+    
+    // 2. 验证拆分结果
+    if (!result || !validateOutlineData(result)) {
+      message.error('大纲内容解析失败，请尝试修改大纲内容或更换模型')
+      return
+    }
+
+    // 3. 存储拆分结果并打开模板选择器
+    bananaOutlineData.value = result
+    showBananaTemplateSelector.value = true
+  } 
+  catch (error: any) {
+    console.error('大纲拆分失败:', error)
+    message.error(error.message || '大纲拆分失败，请重试')
+  } 
+  finally {
+    loading.value = false
+  }
 }
 
 // 处理香蕉模板确认
 const handleBananaTemplateConfirm = async (templateId: string, modelId: string) => {
-  showBananaTemplateSelector.value = false
-
-  // 解析大纲
-  const outlineData = parseOutlineFromMarkdown(outline.value)
-  if (!outlineData || !validateOutlineData(outlineData)) {
-    message.error('大纲格式不正确')
+  if (!bananaOutlineData.value) {
+    message.error('缺少大纲数据，请重新生成')
     return
   }
 
+  showBananaTemplateSelector.value = false
+
   // 开始生成
   const success = await startGeneration({
-    outline: outlineData,
+    outline: bananaOutlineData.value,
     templateId,
     generationModel: modelId,
     canvasSize: {
@@ -438,7 +452,8 @@ const pollGenerationStatusForDialog = async () => {
         }, 2000)
       }
     }
-  } catch (error) {
+  } 
+  catch (error) {
     console.error('轮询生成状态失败:', error)
     // 继续重试
     setTimeout(() => {

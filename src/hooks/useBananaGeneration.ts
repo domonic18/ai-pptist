@@ -13,7 +13,7 @@ import {
 } from '@/types/banana-generation'
 import message from '@/utils/message'
 import { nanoid } from 'nanoid'
-import type { Slide, PPTElement } from '@/types/slides'
+import type { Slide, PPTElement, PPTImageElement } from '@/types/slides'
 
 const POLL_INTERVAL = 2000 // 2秒轮询一次
 
@@ -69,7 +69,7 @@ export default function useBananaGeneration() {
   /**
    * 更新幻灯片图片
    */
-  const updateSlideImage = (slideIndex: number, imageUrl: string) => {
+  const updateSlideImage = (slideIndex: number, imageUrl: string, cosPath?: string) => {
     if (slideIndex < 0 || slideIndex >= slidesStore.slides.length) {
       console.warn(`幻灯片索引 ${slideIndex} 超出范围`)
       return
@@ -78,9 +78,10 @@ export default function useBananaGeneration() {
     const slide = slidesStore.slides[slideIndex]
 
     // 替换所有元素为单个图片元素
-    const imageElement: PPTElement = {
+    // 使用固定的 ID 前缀 + 索引，确保在同一次生成任务中 ID 稳定，避免重复渲染导致的闪烁
+    const imageElement: PPTImageElement = {
       type: 'image',
-      id: nanoid(10),
+      id: `banana-image-${slideIndex}`,
       left: 0,
       top: 0,
       width: slidesStore.viewportSize,
@@ -88,6 +89,10 @@ export default function useBananaGeneration() {
       rotate: 0,
       src: imageUrl,
       fixedRatio: true,
+      imageInfo: cosPath ? {
+        id: nanoid(10),
+        cosKey: cosPath,
+      } : undefined,
     }
 
     // 更新幻灯片
@@ -98,7 +103,7 @@ export default function useBananaGeneration() {
       slide.id
     )
 
-    console.log(`幻灯片 ${slideIndex + 1} 图片已更新`)
+    console.log(`幻灯片 ${slideIndex + 1} 图片已更新:`, { cosPath, imageUrl })
   }
 
   /**
@@ -109,6 +114,9 @@ export default function useBananaGeneration() {
       return
     }
 
+    // 先清除之前的定时器，防止多个轮询循环同时运行
+    stopPolling()
+
     try {
       const statusData = await bananaGenerationService.getGenerationStatus(
         currentTaskId.value
@@ -117,8 +125,20 @@ export default function useBananaGeneration() {
       // 更新已完成的幻灯片图片
       if (statusData.slides) {
         statusData.slides.forEach((slide) => {
-          if (slide.status === 'completed' && slide.imageUrl) {
-            updateSlideImage(slide.index, slide.imageUrl)
+          // 只有状态为已完成时才尝试更新图片
+          if (slide.status === 'completed') {
+            const currentSlide = slidesStore.slides[slide.index]
+            if (!currentSlide) return
+
+            // 检查当前幻灯片是否已经是图片（即已经更新过）
+            // 只有当它还是初始状态（骨架图）时才执行更新
+            const hasImage = currentSlide.elements.some(el => el.type === 'image')
+            if (!hasImage) {
+              const imagePath = slide.cosPath || slide.imageUrl
+              if (imagePath) {
+                updateSlideImage(slide.index, imagePath, slide.cosPath)
+              }
+            }
           }
         })
       }
@@ -129,30 +149,34 @@ export default function useBananaGeneration() {
         pollTimer.value = window.setTimeout(() => {
           pollGenerationStatus()
         }, POLL_INTERVAL)
-      } else if (statusData.status === GenerationStatus.COMPLETED) {
+      } 
+      else if (statusData.status === GenerationStatus.COMPLETED) {
         // 全部完成
         isGenerating.value = false
         const failedCount = statusData.progress.failed || 0
         if (failedCount === 0) {
           message.success('幻灯片生成成功！')
-        } else {
+        } 
+        else {
           message.warning(`幻灯片生成完成，${failedCount} 页生成失败`)
         }
         stopPolling()
-      } else if (statusData.status === GenerationStatus.FAILED) {
+      } 
+      else if (statusData.status === GenerationStatus.FAILED) {
         // 任务失败
         isGenerating.value = false
         message.error('幻灯片生成失败')
         stopPolling()
-      } else if (statusData.status === GenerationStatus.CANCELLED) {
+      } 
+      else if (statusData.status === GenerationStatus.CANCELLED) {
         // 任务已取消
         isGenerating.value = false
         message.info('生成任务已取消')
         stopPolling()
       }
-    } catch (error) {
-      console.error('查询生成状态失败:', error)
-      // 继续重试
+    } 
+    catch (error) {
+      // 捕获异常，继续重试
       pollTimer.value = window.setTimeout(() => {
         pollGenerationStatus()
       }, POLL_INTERVAL)
@@ -195,8 +219,8 @@ export default function useBananaGeneration() {
       pollGenerationStatus()
 
       return true
-    } catch (error: any) {
-      console.error('开始生成失败:', error)
+    } 
+    catch (error: any) {
       message.error(error.message || '开始生成失败')
       isGenerating.value = false
       return false
@@ -216,10 +240,45 @@ export default function useBananaGeneration() {
       stopPolling()
       isGenerating.value = false
       message.info('已停止生成')
-    } catch (error: any) {
-      console.error('停止生成失败:', error)
+    } 
+    catch (error: any) {
       message.error(error.message || '停止生成失败')
     }
+  }
+
+  /**
+   * 将单页幻灯片重置为加载状态
+   */
+  const resetSlideToLoading = (slideIndex: number) => {
+    if (slideIndex < 0 || slideIndex >= slidesStore.slides.length) return
+
+    const slide = slidesStore.slides[slideIndex]
+    const loadingElement: PPTElement = {
+      type: 'text',
+      id: nanoid(10),
+      left: slidesStore.viewportSize / 2 - 150,
+      top: slidesStore.viewportSize * slidesStore.viewportRatio / 2 - 20,
+      width: 300,
+      height: 40,
+      rotate: 0,
+      content: `<p style="text-align: center; font-size: 28px; color: #999;">正在重新生成第 ${slideIndex + 1} 页图片...</p>`,
+      defaultColor: '#999',
+      defaultFontName: 'Microsoft YaHei',
+      fontSize: 28,
+      fontFamily: 'Microsoft YaHei',
+      textType: 'title',
+    } as PPTElement
+
+    slidesStore.updateSlide(
+      {
+        elements: [loadingElement],
+        background: {
+          type: 'solid',
+          color: '#f0f0f0',
+        },
+      },
+      slide.id
+    )
   }
 
   /**
@@ -231,6 +290,9 @@ export default function useBananaGeneration() {
     }
 
     try {
+      // 先将该页重置为加载状态，以便轮询逻辑能识别并更新它
+      resetSlideToLoading(slideIndex)
+
       await bananaGenerationService.regenerateSlide(currentTaskId.value, slideIndex)
       message.success(`已开始重新生成第 ${slideIndex + 1} 页`)
 
@@ -239,8 +301,9 @@ export default function useBananaGeneration() {
         isGenerating.value = true
       }
       pollGenerationStatus()
-    } catch (error: any) {
-      console.error('重新生成失败:', error)
+    } 
+    catch (error: any) {
+      // 错误处理
       message.error(error.message || '重新生成失败')
     }
   }
@@ -255,8 +318,8 @@ export default function useBananaGeneration() {
 
     try {
       return await bananaGenerationService.getGenerationStatus(currentTaskId.value)
-    } catch (error) {
-      console.error('获取生成状态失败:', error)
+    } 
+    catch (error) {
       return null
     }
   }

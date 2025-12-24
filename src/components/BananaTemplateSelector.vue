@@ -71,7 +71,8 @@ import { ElMessage } from 'element-plus'
 import Modal from '@/components/Modal.vue'
 import Button from '@/components/Button.vue'
 import Select from '@/components/Select.vue'
-import { BANANA_TEMPLATE_CONFIGS, type BananaTemplateConfig } from '@/configs/bananaTemplates'
+import { bananaGenerationService } from '@/services/bananaGenerationService'
+import type { BananaTemplate } from '@/types/banana-generation'
 import apiService from '@/services'
 
 const props = defineProps<{
@@ -84,18 +85,19 @@ const emit = defineEmits<{
   confirm: [templateId: string, modelId: string]
 }>()
 
-const templates = ref<BananaTemplateConfig[]>([])
+const templates = ref<BananaTemplate[]>([])
 const selectedTemplateId = ref<string>('')
 const loading = ref(false)
 const selectedModelId = ref<string>('')
 const modelOptions = ref<Array<{ label: string; value: string }>>([])
 const modelsLoading = ref(false)
 
-const loadTemplates = () => {
+const loadTemplates = async () => {
   loading.value = true
   try {
-    // 直接使用本地配置，不需要API调用
-    templates.value = BANANA_TEMPLATE_CONFIGS.filter(t => t.type === 'system')
+    // 从后端API获取模板列表（模板图片存储在COS中）
+    const response = await bananaGenerationService.getTemplates('system')
+    templates.value = response.templates
     
     // 默认选择第一个模板
     if (templates.value.length > 0 && !selectedTemplateId.value) {
@@ -103,6 +105,7 @@ const loadTemplates = () => {
     }
   } catch (error) {
     console.error('加载模板失败:', error)
+    ElMessage.error('加载模板列表失败，请确保已初始化模板数据')
   } finally {
     loading.value = false
   }

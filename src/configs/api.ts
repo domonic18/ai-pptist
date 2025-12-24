@@ -131,6 +131,8 @@ export const API_CONFIG = {
 
   // Banana生成相关API
   BANANA_GENERATION: {
+    // 拆分大纲内容
+    SPLIT_OUTLINE: '/api/v1/banana_generation/split_outline',
     // 批量生成幻灯片图片
     GENERATE_BATCH_SLIDES: '/api/v1/banana_generation/generate_batch_slides',
     // 查询生成状态

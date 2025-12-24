@@ -231,7 +231,8 @@ const containerStyle = computed(() => {
   if (props.size === 'custom' && props.width && props.height) {
     style.width = typeof props.width === 'number' ? `${props.width}px` : props.width
     style.height = typeof props.height === 'number' ? `${props.height}px` : props.height
-  } else {
+  } 
+  else {
     const sizeMap: Record<ImageSize, { width: string; height: string }> = {
       small: { width: '50px', height: '50px' },
       medium: { width: '100px', height: '100px' },
@@ -299,57 +300,43 @@ const isImageDataURI = (url: string): boolean => {
 // 加载图片
 async function load() {
   try {
-    // 如果有imageKey，使用imageKey
+    // 优先判断是否为完整 URL 或 Base64，如果是则直接使用，不走代理/缓存逻辑
+    const rawSrc = props.imageKey || props.src
+    if (rawSrc) {
+      if (isDataURI(rawSrc) || /^https?:\/\//i.test(rawSrc)) {
+        currentUrl.value = rawSrc
+        loadingState.value = ImageLoadingState.SUCCESS
+        return
+      }
+    }
+
+    // 如果有 imageKey 且看起来像个 Key（不是 URL），使用 loadImage 逻辑（含代理/缓存）
     if (props.imageKey) {
       const result = await loadImage(props.imageKey, props.options)
       if (!result.success && result.error) {
         emit('error', result.error)
       }
     }
-    // 如果没有imageKey但有src
+    // 如果没有 imageKey 但有 src
     else if (props.src) {
-      // 如果是base64数据URI，直接使用
-      if (isDataURI(props.src)) {
-        // 如果是图片数据URI，检查是否为支持的格式
-        if (isImageDataURI(props.src)) {
-          const unsupportedFormats = ['tiff', 'tif', 'bmp']
-          const formatMatch = props.src.match(/^data:image\/(\w+)/i)
-          const format = formatMatch ? formatMatch[1].toLowerCase() : ''
+      // 已经是代理 URL（包含 /api/v1/img-access/）
+      const isProxyUrl = props.src.includes('/api/v1/img-access/')
 
-          if (unsupportedFormats.includes(format)) {
-            console.warn(`SmartImage: 不支持的图片格式 ${format.toUpperCase()}，将使用占位图`)
-            // 不支持的格式，标记为错误
-            loadingState.value = ImageLoadingState.ERROR
-            error.value = new ImageError(
-              `不支持的图片格式: ${format.toUpperCase()}`,
-              ImageErrorType.UNKNOWN
-            )
-            emit('error', error.value)
-            return
-          }
-        }
-
-        // 支持的数据URI，直接使用
+      if (isProxyUrl) {
+        // 已经是代理 URL，直接使用
         currentUrl.value = props.src
-      } else {
-        // 判断是否为完整的URL（包含协议如 http:// 或 https://）
-        // 或者已经是代理URL（包含 /api/v1/img-access/）
-        const isFullUrl = /^https?:\/\//i.test(props.src)
-        const isProxyUrl = props.src.includes('/api/v1/img-access/')
-
-        if (isFullUrl || isProxyUrl) {
-          // 已经是完整URL或代理URL，直接使用
-          currentUrl.value = props.src
-        } else {
-          // 如果是cos_key（images/.../xxx.jpg），使用代理
-          const proxyUrl = `${API_CONFIG.IMAGE_PROXY.PROXY(props.src)}?mode=redirect`
-          currentUrl.value = proxyUrl
-        }
+      } 
+      else {
+        // 如果是 cos_key（images/.../xxx.jpg），使用代理
+        const proxyUrl = `${API_CONFIG.IMAGE_PROXY.PROXY(props.src)}?mode=redirect`
+        currentUrl.value = proxyUrl
       }
-    } else {
+    } 
+    else {
       console.warn('SmartImage: imageKey or src is required')
     }
-  } catch (err) {
+  } 
+  catch (err) {
     console.error('SmartImage load error:', err)
     emit('error', err)
   }
@@ -377,7 +364,8 @@ async function handleRetry() {
     if (result) {
       emit('retry', props.imageKey || '')
     }
-  } catch (err) {
+  } 
+  catch (err) {
     console.error('SmartImage retry error:', err)
   }
 }
@@ -389,7 +377,8 @@ async function handleRefresh() {
       emit('refresh', props.imageKey || '')
       ElMessage.success('图片刷新成功')
     }
-  } catch (err) {
+  } 
+  catch (err) {
     console.error('SmartImage refresh error:', err)
     ElMessage.error('图片刷新失败')
   }

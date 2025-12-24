@@ -11,6 +11,7 @@ import type {
   StopGenerationResponse,
   TemplatesResponse,
   RegenerateSlideRequest,
+  OutlineData,
 } from '@/types/banana-generation'
 
 /**
@@ -51,6 +52,31 @@ async function apiRequest<T>(
 }
 
 export const bananaGenerationService = {
+  /**
+   * 拆分大纲内容
+   */
+  async splitOutline(
+    content: string,
+    aiModelId: string
+  ): Promise<OutlineData> {
+    const response = await apiRequest<OutlineData>(
+      API_CONFIG.BANANA_GENERATION.SPLIT_OUTLINE,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          content,
+          ai_model_id: aiModelId,
+        }),
+      }
+    )
+
+    if (!response.success || !response.data) {
+      throw new Error(response.error?.message || '大纲拆分失败')
+    }
+
+    return response.data
+  },
+
   /**
    * 批量生成幻灯片图片
    */
