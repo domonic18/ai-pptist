@@ -268,7 +268,7 @@ const openOptimizeSlideDialog = () => {
   optimizeSlideDialogVisible.value = true
 }
 
-// 图片解析功能（使用混合OCR）
+// 图片解析功能（使用混合OCR + 文字去除）
 import imageEditingService from '@/services/imageEditingService'
 import type { HybridTextRegion } from '@/types/imageEditing'
 import {
@@ -277,11 +277,14 @@ import {
   getImageCOSKeyForOCR,
   getSlideId
 } from '@/utils/ocrElementInsert'
+import { applyImageEditingResult } from '@/utils/imageEditingUtils'
+import { useMainStore } from '@/store'
+import { useSlidesStore } from '@/store'
 
 const parsingImage = ref(false)
 
 /**
- * 解析当前幻灯片图片中的文字（使用混合OCR）
+ * 解析当前幻灯片图片中的文字（使用混合OCR + 文字去除）
  */
 const parseImage = async () => {
   // 检查是否有可识别的图片（优先使用选中的图片元素）
@@ -307,17 +310,17 @@ const parseImage = async () => {
 
   try {
     parsingImage.value = true
-    message.info(`正在使用混合OCR解析${sourceText}...`)
+    message.info(`正在使用混合OCR解析${sourceText}并去除文字...`)
 
-    // 调用混合OCR解析API
-    const response = await imageEditingService.parseWithHybridOCR(slideId, cosKey)
+    // 调用完整编辑API（OCR + 文字去除）
+    const response = await imageEditingService.parseAndRemoveText(slideId, cosKey)
 
     // 轮询获取结果
     const result = await imageEditingService.pollEditingResult(
       response.task_id,
       (progress, status) => {
         // 进度回调（可选：可以在UI上显示进度）
-        console.log(`混合OCR解析进度: ${progress}%`)
+        console.log(`图片编辑进度: ${progress}% - ${status}`)
       }
     )
 
@@ -326,24 +329,50 @@ const parseImage = async () => {
       return
     }
 
-    // 转换文字区域格式以兼容现有的插入函数
-    const regions = convertHybridToTextRegion(result.ocr_result.text_regions)
+    // 应用完整的编辑结果（替换背景图片 + 创建文字元素）
+    const mainStore = useMainStore()
+    const slidesStore = useSlidesStore()
 
-    // 插入可编辑元素
+    // 步骤1: 如果有去除文字后的图片，替换背景图片
+    if (result.edited_image && result.edited_image.edited_cos_key) {
+      const slide = slidesStore.slides.find((s: any) => s.id === slideId)
+      if (slide) {
+        slidesStore.updateSlide({
+          ...slide,
+          background: {
+            type: 'image',
+            image: result.edited_image.edited_cos_key
+          }
+        })
+        message.info('背景图片已更新（文字已去除）')
+      }
+    }
+
+    // 步骤2: 创建文字元素
+    const regions = convertHybridToTextRegion(result.ocr_result.text_regions)
     insertOCRElementsAsEditable(regions, result.task_id, {
       cosKey,
       source,
       ocrImageSize: result.ocr_result.metadata?.traditional_count
-        ? undefined // 混合OCR暂不提供原图尺寸，使用默认
+        ? undefined
         : undefined,
       objectFit: 'cover',
     })
 
-    message.success(`混合OCR解析完成！识别到 ${result.ocr_result.metadata.text_count} 个文字区域`)
+    // 步骤3: 记录操作并添加到历史记录
+    mainStore.setEditorState({
+      ...mainStore.editorState,
+      lastImageEditTask: result.task_id
+    })
+    mainStore.addSnapshot()
+
+    const textCount = result.ocr_result.metadata.text_count
+    const hasEditedImage = result.edited_image ? '并已去除文字' : ''
+    message.success(`图片编辑完成！识别到 ${textCount} 个文字区域${hasEditedImage}`)
   }
   catch (error: any) {
     message.error(`解析失败：${error.message || '未知错误'}`)
-    console.error('混合OCR图片解析失败:', error)
+    console.error('图片编辑失败:', error)
   }
   finally {
     parsingImage.value = false

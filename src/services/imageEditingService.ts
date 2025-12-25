@@ -42,15 +42,18 @@ export const imageEditingService = {
    * 一步完成：OCR识别 + 文字去除
    * @param slideId 幻灯片ID
    * @param cosKey 图片COS Key
+   * @param aiModelId AI模型ID（可选，用于文字去除）
    * @returns 解析任务响应
    */
   async parseAndRemoveText(
     slideId: string,
-    cosKey: string
+    cosKey: string,
+    aiModelId?: string
   ): Promise<EditingTaskResponse> {
     const response = await axios.post(API_CONFIG.IMAGE_EDITING.PARSE_AND_REMOVE, {
       slide_id: slideId,
-      cos_key: cosKey
+      cos_key: cosKey,
+      ai_model_id: aiModelId || null
     })
 
     if (response.data.success) {
