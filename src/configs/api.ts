@@ -153,6 +153,16 @@ export const API_CONFIG = {
     STATUS: (taskId: string) => `/api/v1/image_parsing/status/${taskId}`,
   },
 
+  // 图片编辑相关API（混合OCR + 文字去除）
+  IMAGE_EDITING: {
+    // 混合OCR识别
+    PARSE_HYBRID_OCR: '/api/v1/image_editing/parse_hybrid_ocr',
+    // 一步完成：OCR + 去除文字
+    PARSE_AND_REMOVE: '/api/v1/image_editing/parse_and_remove',
+    // 查询任务状态
+    STATUS: (taskId: string) => `/api/v1/image_editing/status/${taskId}`,
+  },
+
   // 其他API端点可以根据需要继续添加
 } as const
 

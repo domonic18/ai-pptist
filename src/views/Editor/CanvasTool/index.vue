@@ -268,8 +268,9 @@ const openOptimizeSlideDialog = () => {
   optimizeSlideDialogVisible.value = true
 }
 
-// 图片解析功能
-import imageParsingService from '@/services/imageParsingService'
+// 图片解析功能（使用混合OCR）
+import imageEditingService from '@/services/imageEditingService'
+import type { HybridTextRegion } from '@/types/imageEditing'
 import {
   insertOCRElementsAsEditable,
   hasImageForOCR,
@@ -280,7 +281,7 @@ import {
 const parsingImage = ref(false)
 
 /**
- * 解析当前幻灯片图片中的文字
+ * 解析当前幻灯片图片中的文字（使用混合OCR）
  */
 const parseImage = async () => {
   // 检查是否有可识别的图片（优先使用选中的图片元素）
@@ -306,40 +307,61 @@ const parseImage = async () => {
 
   try {
     parsingImage.value = true
-    message.info(`正在解析${sourceText}...`)
+    message.info(`正在使用混合OCR解析${sourceText}...`)
 
-    // 调用解析API（传递 cos_key，后端负责下载和转码）
-    const response = await imageParsingService.parseSlideImage(slideId, cosKey)
+    // 调用混合OCR解析API
+    const response = await imageEditingService.parseWithHybridOCR(slideId, cosKey)
 
     // 轮询获取结果
-    const result = await imageParsingService.pollParsingResult(
+    const result = await imageEditingService.pollEditingResult(
       response.task_id,
       (progress, status) => {
         // 进度回调（可选：可以在UI上显示进度）
-        console.log(`解析进度: ${progress}%`)
+        console.log(`混合OCR解析进度: ${progress}%`)
       }
     )
 
+    if (!result.ocr_result || !result.ocr_result.text_regions) {
+      message.error('解析结果为空')
+      return
+    }
+
+    // 转换文字区域格式以兼容现有的插入函数
+    const regions = convertHybridToTextRegion(result.ocr_result.text_regions)
+
     // 插入可编辑元素
-    insertOCRElementsAsEditable(result.text_regions, result.task_id, {
+    insertOCRElementsAsEditable(regions, result.task_id, {
       cosKey,
       source,
-      ocrImageSize: result?.metadata?.image_width && result?.metadata?.image_height
-        ? { width: result.metadata.image_width, height: result.metadata.image_height }
+      ocrImageSize: result.ocr_result.metadata?.traditional_count
+        ? undefined // 混合OCR暂不提供原图尺寸，使用默认
         : undefined,
       objectFit: 'cover',
     })
 
-    message.success(`解析完成！识别到 ${result.metadata.text_count} 个文字区域`)
-
+    message.success(`混合OCR解析完成！识别到 ${result.ocr_result.metadata.text_count} 个文字区域`)
   }
   catch (error: any) {
     message.error(`解析失败：${error.message || '未知错误'}`)
-    console.error('图片解析失败:', error)
+    console.error('混合OCR图片解析失败:', error)
   }
   finally {
     parsingImage.value = false
   }
+}
+
+/**
+ * 将混合OCR结果转换为兼容的TextRegion格式
+ */
+function convertHybridToTextRegion(hybridRegions: HybridTextRegion[]) {
+  // 混合OCR的格式与TextRegion兼容，直接返回即可
+  return hybridRegions.map(region => ({
+    id: region.id,
+    text: region.text,
+    bbox: region.bbox,
+    confidence: region.confidence,
+    font: region.font
+  }))
 }
 </script>
 
