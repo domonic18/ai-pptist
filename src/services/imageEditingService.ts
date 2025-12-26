@@ -1,21 +1,62 @@
 /**
  * 图片编辑服务
- * 封装混合OCR识别和图片编辑的API调用
+ * 封装MinerU、混合OCR识别和图片编辑的API调用
  */
 
-import axios from 'axios'
-import { API_CONFIG } from '@/configs/api'
+import axios from "axios";
+import { API_CONFIG } from "@/configs/api";
 import type {
   EditingTaskResponse,
   EditingStatusResponse,
   EditingResultResponse,
-  HybridOCRResult
-} from '@/types/imageEditing'
+  HybridOCRResult,
+} from "@/types/imageEditing";
+
+/**
+ * MinerU识别选项
+ */
+export interface MinerUParseOptions {
+  enable_formula?: boolean;
+  enable_table?: boolean;
+  enable_style_recognition?: boolean;
+  remove_text?: boolean;
+}
 
 /**
  * 图片编辑服务
  */
 export const imageEditingService = {
+  /**
+   * 使用MinerU识别图片（精确坐标 + 多模态样式）
+   * @param slideId 幻灯片ID
+   * @param cosKey 图片COS Key
+   * @param options 识别选项
+   * @returns 解析任务响应
+   */
+  async parseWithMinerU(
+    slideId: string,
+    cosKey: string,
+    options: MinerUParseOptions = {},
+  ): Promise<EditingTaskResponse> {
+    const response = await axios.post(
+      API_CONFIG.IMAGE_EDITING.PARSE_WITH_MINERU,
+      {
+        slide_id: slideId,
+        cos_key: cosKey,
+        enable_formula: options.enable_formula !== false,
+        enable_table: options.enable_table !== false,
+        enable_style_recognition: options.enable_style_recognition !== false,
+        remove_text: options.remove_text || false,
+      },
+    );
+
+    if (response.data.success) {
+      return response.data.data;
+    }
+
+    throw new Error(response.data.error?.message || "MinerU识别失败");
+  },
+
   /**
    * 混合OCR识别
    * @param slideId 幻灯片ID
@@ -24,18 +65,21 @@ export const imageEditingService = {
    */
   async parseWithHybridOCR(
     slideId: string,
-    cosKey: string
+    cosKey: string,
   ): Promise<EditingTaskResponse> {
-    const response = await axios.post(API_CONFIG.IMAGE_EDITING.PARSE_HYBRID_OCR, {
-      slide_id: slideId,
-      cos_key: cosKey
-    })
+    const response = await axios.post(
+      API_CONFIG.IMAGE_EDITING.PARSE_HYBRID_OCR,
+      {
+        slide_id: slideId,
+        cos_key: cosKey,
+      },
+    );
 
     if (response.data.success) {
-      return response.data.data
+      return response.data.data;
     }
 
-    throw new Error(response.data.error?.message || '混合OCR识别失败')
+    throw new Error(response.data.error?.message || "混合OCR识别失败");
   },
 
   /**
@@ -43,24 +87,30 @@ export const imageEditingService = {
    * @param slideId 幻灯片ID
    * @param cosKey 图片COS Key
    * @param aiModelId AI模型ID（可选，用于文字去除）
+   * @param ocrEngine OCR引擎：mineru | hybrid_ocr（默认hybrid_ocr）
    * @returns 解析任务响应
    */
   async parseAndRemoveText(
     slideId: string,
     cosKey: string,
-    aiModelId?: string
+    aiModelId?: string,
+    ocrEngine?: "mineru" | "hybrid_ocr",
   ): Promise<EditingTaskResponse> {
-    const response = await axios.post(API_CONFIG.IMAGE_EDITING.PARSE_AND_REMOVE, {
-      slide_id: slideId,
-      cos_key: cosKey,
-      ai_model_id: aiModelId || null
-    })
+    const response = await axios.post(
+      API_CONFIG.IMAGE_EDITING.PARSE_AND_REMOVE,
+      {
+        slide_id: slideId,
+        cos_key: cosKey,
+        ai_model_id: aiModelId || null,
+        ocr_engine: ocrEngine || "hybrid_ocr",
+      },
+    );
 
     if (response.data.success) {
-      return response.data.data
+      return response.data.data;
     }
 
-    throw new Error(response.data.error?.message || '图片编辑失败')
+    throw new Error(response.data.error?.message || "图片编辑失败");
   },
 
   /**
@@ -69,15 +119,13 @@ export const imageEditingService = {
    * @returns 任务状态响应
    */
   async getEditingStatus(taskId: string): Promise<EditingStatusResponse> {
-    const response = await axios.get(
-      API_CONFIG.IMAGE_EDITING.STATUS(taskId)
-    )
+    const response = await axios.get(API_CONFIG.IMAGE_EDITING.STATUS(taskId));
 
     if (response.data.success) {
-      return response.data.data
+      return response.data.data;
     }
 
-    throw new Error(response.data.error?.message || '查询状态失败')
+    throw new Error(response.data.error?.message || "查询状态失败");
   },
 
   /**
@@ -90,43 +138,43 @@ export const imageEditingService = {
   async pollEditingResult(
     taskId: string,
     onProgress?: (progress: number, status: string) => void,
-    interval: number = 2000
+    interval: number = 2000,
   ): Promise<EditingResultResponse> {
-    const maxAttempts = 60
-    let attempts = 0
+    const maxAttempts = 60;
+    let attempts = 0;
 
     while (attempts < maxAttempts) {
-      const result = await this.getEditingStatus(taskId)
+      const result = await this.getEditingStatus(taskId);
 
       // 通知进度
       if (onProgress) {
-        onProgress(result.progress, result.status)
+        onProgress(result.progress, result.status);
       }
 
       // 检查是否完成
-      if (result.status === 'completed') {
+      if (result.status === "completed") {
         return {
           task_id: result.task_id,
           slide_id: result.slide_id,
           status: result.status,
           progress: result.progress,
           ocr_result: result.ocr_result,
-          edited_image: result.edited_image
-        }
+          edited_image: result.edited_image,
+        };
       }
 
       // 检查是否失败
-      if (result.status === 'failed') {
-        throw new Error(result.message || '编辑失败')
+      if (result.status === "failed") {
+        throw new Error(result.message || "编辑失败");
       }
 
       // 等待后重试
-      await new Promise(resolve => setTimeout(resolve, interval))
-      attempts++
+      await new Promise((resolve) => setTimeout(resolve, interval));
+      attempts++;
     }
 
-    throw new Error('编辑超时')
-  }
-}
+    throw new Error("编辑超时");
+  },
+};
 
-export default imageEditingService
+export default imageEditingService;

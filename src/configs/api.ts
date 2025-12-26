@@ -7,7 +7,7 @@ export const API_CONFIG = {
   // 图片管理相关API
   IMAGES: {
     // 获取图片列表
-    LIST: '/api/v1/images',
+    LIST: "/api/v1/images",
     // 获取图片详情
     DETAIL: (id: string) => `/api/v1/images/${id}`,
     // 更新图片信息
@@ -15,11 +15,11 @@ export const API_CONFIG = {
     // 删除图片
     DELETE: (id: string) => `/api/v1/images/${id}`,
     // 批量操作
-    BATCH: '/api/v1/images/batch',
+    BATCH: "/api/v1/images/batch",
     // 批量删除
-    BATCH_DELETE: '/api/v1/images/batch/delete',
+    BATCH_DELETE: "/api/v1/images/batch/delete",
     // 图片搜索
-    SEARCH: '/api/v1/images/search',
+    SEARCH: "/api/v1/images/search",
   },
 
   // 图片代理相关API
@@ -31,35 +31,35 @@ export const API_CONFIG = {
     // 刷新图片URL
     REFRESH: (imageKey: string) => `/api/v1/img-access/refresh/${imageKey}`,
     // 批量获取URL
-    BATCH_URLS: '/api/v1/img-access/batch/urls',
+    BATCH_URLS: "/api/v1/img-access/batch/urls",
     // 获取性能统计
-    STATS: '/api/v1/img-access/stats',
+    STATS: "/api/v1/img-access/stats",
     // 清理过期缓存
-    CLEANUP: '/api/v1/img-access/cleanup',
+    CLEANUP: "/api/v1/img-access/cleanup",
     // 预加载URL
-    PRELOAD: '/api/v1/img-access/preload',
+    PRELOAD: "/api/v1/img-access/preload",
   },
 
   // 图片上传相关API
   IMAGE_UPLOAD: {
     // 上传图片
-    UPLOAD: '/api/v1/images/upload',
+    UPLOAD: "/api/v1/images/upload",
     // 获取预签名URL
-    PRESIGNED: '/api/v1/images/upload/presigned',
+    PRESIGNED: "/api/v1/images/upload/presigned",
     // 批量上传
-    BATCH: '/api/v1/images/upload/batch',
+    BATCH: "/api/v1/images/upload/batch",
   },
 
   // 标签管理相关API
   TAGS: {
     // 获取所有标签
-    LIST: '/api/v1/tags',
+    LIST: "/api/v1/tags",
     // 获取热门标签
-    POPULAR: '/api/v1/tags/popular',
+    POPULAR: "/api/v1/tags/popular",
     // 搜索标签
-    SEARCH: '/api/v1/tags/search',
+    SEARCH: "/api/v1/tags/search",
     // 创建标签
-    CREATE: '/api/v1/tags',
+    CREATE: "/api/v1/tags",
     // 删除标签
     DELETE: (tagName: string) => `/api/v1/tags/${tagName}`,
   },
@@ -78,37 +78,37 @@ export const API_CONFIG = {
     DELETE_SPECIFIC: (imageId: string, tag: string) =>
       `/api/v1/images/${imageId}/tags/${tag}`,
     // 根据标签搜索图片
-    SEARCH_BY_TAGS: '/api/v1/images/search/by-tags',
+    SEARCH_BY_TAGS: "/api/v1/images/search/by-tags",
     // 批量操作图片标签
-    BATCH_OPERATE: '/api/v1/images/batch-tags',
+    BATCH_OPERATE: "/api/v1/images/batch-tags",
   },
 
   // AI生成相关API
   GENERATION: {
     // 生成演示文稿大纲
-    OUTLINE: '/api/v1/generate/outline',
+    OUTLINE: "/api/v1/generate/outline",
     // 生成演示文稿幻灯片
-    SLIDES: '/api/v1/generate/slides',
+    SLIDES: "/api/v1/generate/slides",
   },
 
   // 图片生成相关API
   IMAGE_GENERATION: {
     // 生成图片
-    GENERATE: '/api/v1/generate/image',
+    GENERATE: "/api/v1/generate/image",
     // 生成图片并存储到数据库
-    GENERATE_AND_STORE: '/api/v1/generate/image/store',
+    GENERATE_AND_STORE: "/api/v1/generate/image/store",
     // 获取生成历史
-    HISTORY: '/api/v1/images/generation-history',
+    HISTORY: "/api/v1/images/generation-history",
   },
 
   // AI模型管理相关API
   AI_MODELS: {
     // 获取AI模型列表
-    LIST: '/api/v1/ai-models',
+    LIST: "/api/v1/ai-models",
     // 获取AI模型详情（包含敏感信息如API密钥）
     DETAIL: (id: string) => `/api/v1/ai-models/${id}`,
     // 创建AI模型
-    CREATE: '/api/v1/ai-models/models',
+    CREATE: "/api/v1/ai-models/models",
     // 更新AI模型
     UPDATE: (id: string) => `/api/v1/ai-models/models/${id}`,
     // 删除AI模型
@@ -118,52 +118,56 @@ export const API_CONFIG = {
   // 布局优化相关API
   LAYOUT: {
     // 优化幻灯片布局
-    OPTIMIZE: '/api/v1/layout/optimize',
+    OPTIMIZE: "/api/v1/layout/optimize",
   },
 
   // 自动标注相关API
   ANNOTATION: {
     // 单张幻灯片同步标注
-    SINGLE: '/api/v1/annotation/single',
+    SINGLE: "/api/v1/annotation/single",
     // 批量幻灯片异步标注
-    BATCH: '/api/v1/annotation/batch',
+    BATCH: "/api/v1/annotation/batch",
   },
 
   // Banana生成相关API
   BANANA_GENERATION: {
     // 拆分大纲内容
-    SPLIT_OUTLINE: '/api/v1/banana_generation/split_outline',
+    SPLIT_OUTLINE: "/api/v1/banana_generation/split_outline",
     // 批量生成幻灯片图片
-    GENERATE_BATCH_SLIDES: '/api/v1/banana_generation/generate_batch_slides',
+    GENERATE_BATCH_SLIDES: "/api/v1/banana_generation/generate_batch_slides",
     // 查询生成状态
-    GENERATION_STATUS: (taskId: string) => `/api/v1/banana_generation/generation_status/${taskId}`,
+    GENERATION_STATUS: (taskId: string) =>
+      `/api/v1/banana_generation/generation_status/${taskId}`,
     // 停止生成任务
-    STOP_GENERATION: (taskId: string) => `/api/v1/banana_generation/stop_generation/${taskId}`,
+    STOP_GENERATION: (taskId: string) =>
+      `/api/v1/banana_generation/stop_generation/${taskId}`,
     // 重新生成单页
-    REGENERATE_SLIDE: '/api/v1/banana_generation/regenerate_slide',
+    REGENERATE_SLIDE: "/api/v1/banana_generation/regenerate_slide",
     // 获取模板列表
-    TEMPLATES: '/api/v1/banana_generation/templates',
+    TEMPLATES: "/api/v1/banana_generation/templates",
   },
 
   // 图片解析相关API
   IMAGE_PARSING: {
     // 解析图片中的文字
-    PARSE: '/api/v1/image_parsing/parse',
+    PARSE: "/api/v1/image_parsing/parse",
     // 查询解析状态
     STATUS: (taskId: string) => `/api/v1/image_parsing/status/${taskId}`,
   },
 
   // 图片编辑相关API（混合OCR + 文字去除）
   IMAGE_EDITING: {
+    // MinerU识别（精确坐标 + 多模态样式）
+    PARSE_WITH_MINERU: "/api/v1/image_editing/parse_with_mineru",
     // 混合OCR识别
-    PARSE_HYBRID_OCR: '/api/v1/image_editing/parse_hybrid_ocr',
+    PARSE_HYBRID_OCR: "/api/v1/image_editing/parse_hybrid_ocr",
     // 一步完成：OCR + 去除文字
-    PARSE_AND_REMOVE: '/api/v1/image_editing/parse_and_remove',
+    PARSE_AND_REMOVE: "/api/v1/image_editing/parse_and_remove",
     // 查询任务状态
     STATUS: (taskId: string) => `/api/v1/image_editing/status/${taskId}`,
   },
 
   // 其他API端点可以根据需要继续添加
-} as const
+} as const;
 
-export default API_CONFIG
+export default API_CONFIG;

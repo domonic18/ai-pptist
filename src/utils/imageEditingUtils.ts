@@ -4,7 +4,7 @@
  */
 
 import { nanoid } from 'nanoid'
-import type { PPTTextElement } from '@/types/slides'
+import type { PPTTextElement, SlideBackground } from '@/types/slides'
 import type { HybridTextRegion } from '@/types/imageEditing'
 
 // 图片分辨率约定（与香蕉生成保持一致）
@@ -37,6 +37,12 @@ export function convertOCRToTextElements(
     const width = region.bbox.width * scaleX
     const height = region.bbox.height * scaleY
 
+    // 构建带样式的HTML内容
+    const fontSize = region.font.size * scaleX
+    const fontWeight = region.font.weight === 'bold' ? 'bold' : 'normal'
+    const textAlign = region.font.align || 'left'
+    const content = `<p style="margin: 0; font-family: ${region.font.family}; font-size: ${fontSize}px; color: ${region.font.color}; font-weight: ${fontWeight}; text-align: ${textAlign};">${region.text}</p>`
+
     // 创建文字元素
     const textElement: PPTTextElement = {
       type: 'text',
@@ -46,13 +52,12 @@ export function convertOCRToTextElements(
       width,
       height,
       rotate: 0,
-      content: region.text,
+      content: content,
       defaultFontName: region.font.family,
-      defaultFontSize: region.font.size * scaleX,  // 按比例缩放字体大小
       defaultColor: region.font.color,
-      fontWeight: region.font.weight === 'bold' ? 600 : 400,
-      textAlign: region.font.align || 'left',
-      verticalAlign: 'top',
+      lineHeight: 1.5,
+      vertical: false,
+      fill: region.font.color,
     }
 
     elements.push(textElement)
@@ -79,9 +84,8 @@ export async function applyImageEditingResult(
   viewportSize: number,
   viewportRatio: number
 ): Promise<void> {
-  const { useSlidesStore, useMainStore } = await import('@/store')
+  const { useSlidesStore } = await import('@/store')
   const slidesStore = useSlidesStore()
-  const mainStore = useMainStore()
 
   if (!result.ocr_result || !result.ocr_result.text_regions) {
     throw new Error('OCR识别结果不完整')
@@ -104,15 +108,6 @@ export async function applyImageEditingResult(
   for (const element of textElements) {
     slidesStore.addElement(element)
   }
-
-  // 步骤4: 记录操作（用于撤销）
-  mainStore.setEditorState({
-    ...mainStore.editorState,
-    lastImageEditTask: result.task_id
-  })
-
-  // 步骤5: 添加到历史记录
-  mainStore.addSnapshot()
 }
 
 /**
@@ -128,13 +123,23 @@ async function replaceSlideBackground(
 
   if (!slide) return
 
+  // 创建新的背景对象
+  const newBackground: SlideBackground = {
+    type: 'image',
+    image: {
+      src: newCosKey,
+      size: 'cover',
+      imageInfo: {
+        id: newCosKey,
+        cosKey: newCosKey,
+      },
+    },
+  }
+
   // 更新背景图片
   slidesStore.updateSlide({
     ...slide,
-    background: {
-      type: 'image',
-      image: newCosKey
-    }
+    background: newBackground,
   })
 }
 

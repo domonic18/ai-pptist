@@ -1,124 +1,313 @@
 <template>
   <div class="canvas-tool">
     <div class="left-handler">
-      <IconBack class="handler-item" :class="{ 'disable': !canUndo }" v-tooltip="'撤销（Ctrl + Z）'" @click="undo()" />
-      <IconNext class="handler-item" :class="{ 'disable': !canRedo }" v-tooltip="'重做（Ctrl + Y）'" @click="redo()" />
+      <IconBack
+        class="handler-item"
+        :class="{ disable: !canUndo }"
+        v-tooltip="'撤销（Ctrl + Z）'"
+        @click="undo()"
+      />
+      <IconNext
+        class="handler-item"
+        :class="{ disable: !canRedo }"
+        v-tooltip="'重做（Ctrl + Y）'"
+        @click="redo()"
+      />
       <div class="more">
-        <Divider type="vertical" style="height: 20px;" />
-        <Popover class="more-icon" trigger="click" v-model:value="moreVisible" :offset="10">
+        <Divider type="vertical" style="height: 20px" />
+        <Popover
+          class="more-icon"
+          trigger="click"
+          v-model:value="moreVisible"
+          :offset="10"
+        >
           <template #content>
-            <PopoverMenuItem center @click="openOptimizeSlideDialog(); moreVisible = false">
+            <PopoverMenuItem
+              center
+              @click="
+                openOptimizeSlideDialog();
+                moreVisible = false;
+              "
+            >
               <IconMagic class="icon" />
               优化幻灯片
             </PopoverMenuItem>
-            <PopoverMenuItem center @click="parseImage(); moreVisible = false">
+            <PopoverMenuItem
+              center
+              @click="
+                openOCREngineSelector();
+                moreVisible = false;
+              "
+            >
               <IconFontSize class="icon" />
               解析图片
             </PopoverMenuItem>
-            <PopoverMenuItem center @click="toggleNotesPanel(); moreVisible = false">批注面板</PopoverMenuItem>
-            <PopoverMenuItem center @click="toggleSelectPanel(); moreVisible = false">选择窗格</PopoverMenuItem>
-            <PopoverMenuItem center @click="toggleSraechPanel(); moreVisible = false">查找替换</PopoverMenuItem>
+            <PopoverMenuItem
+              center
+              @click="
+                toggleNotesPanel();
+                moreVisible = false;
+              "
+              >批注面板</PopoverMenuItem
+            >
+            <PopoverMenuItem
+              center
+              @click="
+                toggleSelectPanel();
+                moreVisible = false;
+              "
+              >选择窗格</PopoverMenuItem
+            >
+            <PopoverMenuItem
+              center
+              @click="
+                toggleSraechPanel();
+                moreVisible = false;
+              "
+              >查找替换</PopoverMenuItem
+            >
           </template>
           <IconMore class="handler-item" />
         </Popover>
-        <IconComment class="handler-item" :class="{ 'active': showNotesPanel }" v-tooltip="'批注面板'" @click="toggleNotesPanel()" />
-        <IconMoveOne class="handler-item" :class="{ 'active': showSelectPanel }" v-tooltip="'选择窗格'" @click="toggleSelectPanel()" />
-        <IconSearch class="handler-item" :class="{ 'active': showSearchPanel }" v-tooltip="'查找/替换（Ctrl + F）'" @click="toggleSraechPanel()" />
-        <IconMagic class="handler-item" :class="{ 'active': optimizeSlideDialogVisible }" v-tooltip="'优化幻灯片'" @click="openOptimizeSlideDialog()" />
-        <IconFontSize class="handler-item" :class="{ 'active': parsingImage }" v-tooltip="'解析图片（OCR）'" @click="parseImage()" />
+        <IconComment
+          class="handler-item"
+          :class="{ active: showNotesPanel }"
+          v-tooltip="'批注面板'"
+          @click="toggleNotesPanel()"
+        />
+        <IconMoveOne
+          class="handler-item"
+          :class="{ active: showSelectPanel }"
+          v-tooltip="'选择窗格'"
+          @click="toggleSelectPanel()"
+        />
+        <IconSearch
+          class="handler-item"
+          :class="{ active: showSearchPanel }"
+          v-tooltip="'查找/替换（Ctrl + F）'"
+          @click="toggleSraechPanel()"
+        />
+        <IconMagic
+          class="handler-item"
+          :class="{ active: optimizeSlideDialogVisible }"
+          v-tooltip="'优化幻灯片'"
+          @click="openOptimizeSlideDialog()"
+        />
+        <IconFontSize
+          class="handler-item"
+          :class="{ active: parsingImage }"
+          v-tooltip="'解析图片（OCR）'"
+          @click="openOCREngineSelector()"
+        />
       </div>
     </div>
 
     <div class="add-element-handler">
       <div class="handler-item group-btn" v-tooltip="'插入文字'">
-        <IconFontSize class="icon" :class="{ 'active': creatingElement?.type === 'text' }" @click="drawText()" />
-        
-        <Popover trigger="click" v-model:value="textTypeSelectVisible" style="height: 100%;" :offset="10">
+        <IconFontSize
+          class="icon"
+          :class="{ active: creatingElement?.type === 'text' }"
+          @click="drawText()"
+        />
+
+        <Popover
+          trigger="click"
+          v-model:value="textTypeSelectVisible"
+          style="height: 100%"
+          :offset="10"
+        >
           <template #content>
-            <PopoverMenuItem center @click="() => { drawText(); textTypeSelectVisible = false }"><IconTextRotationNone /> 横向文本框</PopoverMenuItem>
-            <PopoverMenuItem center @click="() => { drawText(true); textTypeSelectVisible = false }"><IconTextRotationDown /> 竖向文本框</PopoverMenuItem>
+            <PopoverMenuItem
+              center
+              @click="
+                () => {
+                  drawText();
+                  textTypeSelectVisible = false;
+                }
+              "
+              ><IconTextRotationNone /> 横向文本框</PopoverMenuItem
+            >
+            <PopoverMenuItem
+              center
+              @click="
+                () => {
+                  drawText(true);
+                  textTypeSelectVisible = false;
+                }
+              "
+              ><IconTextRotationDown /> 竖向文本框</PopoverMenuItem
+            >
           </template>
           <IconDown class="arrow" />
         </Popover>
       </div>
       <div class="handler-item group-btn" v-tooltip="'插入形状'" :offset="10">
-        <Popover trigger="click" style="height: 100%;" v-model:value="shapePoolVisible" :offset="10">
+        <Popover
+          trigger="click"
+          style="height: 100%"
+          v-model:value="shapePoolVisible"
+          :offset="10"
+        >
           <template #content>
-            <ShapePool @select="shape => drawShape(shape)" />
+            <ShapePool @select="(shape) => drawShape(shape)" />
           </template>
-          <IconGraphicDesign class="icon" :class="{ 'active': creatingCustomShape || creatingElement?.type === 'shape' }" />
+          <IconGraphicDesign
+            class="icon"
+            :class="{
+              active: creatingCustomShape || creatingElement?.type === 'shape',
+            }"
+          />
         </Popover>
-        
-        <Popover trigger="click" v-model:value="shapeMenuVisible" style="height: 100%;" :offset="10">
+
+        <Popover
+          trigger="click"
+          v-model:value="shapeMenuVisible"
+          style="height: 100%"
+          :offset="10"
+        >
           <template #content>
-            <PopoverMenuItem center @click="() => { drawCustomShape(); shapeMenuVisible = false }">自由绘制</PopoverMenuItem>
+            <PopoverMenuItem
+              center
+              @click="
+                () => {
+                  drawCustomShape();
+                  shapeMenuVisible = false;
+                }
+              "
+              >自由绘制</PopoverMenuItem
+            >
           </template>
           <IconDown class="arrow" />
         </Popover>
       </div>
-      <div class="handler-item" v-tooltip="'插入图片'" @click="openImageManager">
+      <div
+        class="handler-item"
+        v-tooltip="'插入图片'"
+        @click="openImageManager"
+      >
         <IconPicture />
       </div>
       <Popover trigger="click" v-model:value="linePoolVisible" :offset="10">
         <template #content>
-          <LinePool @select="line => drawLine(line)" />
+          <LinePool @select="(line) => drawLine(line)" />
         </template>
-        <IconConnection class="handler-item" :class="{ 'active': creatingElement?.type === 'line' }" v-tooltip="'插入线条'" />
+        <IconConnection
+          class="handler-item"
+          :class="{ active: creatingElement?.type === 'line' }"
+          v-tooltip="'插入线条'"
+        />
       </Popover>
       <Popover trigger="click" v-model:value="chartPoolVisible" :offset="10">
         <template #content>
-          <ChartPool @select="chart => { createChartElement(chart); chartPoolVisible = false }" />
+          <ChartPool
+            @select="
+              (chart) => {
+                createChartElement(chart);
+                chartPoolVisible = false;
+              }
+            "
+          />
         </template>
         <IconChartProportion class="handler-item" v-tooltip="'插入图表'" />
       </Popover>
-      <Popover trigger="click" v-model:value="tableGeneratorVisible" :offset="10">
+      <Popover
+        trigger="click"
+        v-model:value="tableGeneratorVisible"
+        :offset="10"
+      >
         <template #content>
           <TableGenerator
             @close="tableGeneratorVisible = false"
-            @insert="({ row, col }) => { createTableElement(row, col); tableGeneratorVisible = false }"
+            @insert="
+              ({ row, col }) => {
+                createTableElement(row, col);
+                tableGeneratorVisible = false;
+              }
+            "
           />
         </template>
         <IconInsertTable class="handler-item" v-tooltip="'插入表格'" />
       </Popover>
-      <IconFormula class="handler-item" v-tooltip="'插入公式'" @click="latexEditorVisible = true" />
+      <IconFormula
+        class="handler-item"
+        v-tooltip="'插入公式'"
+        @click="latexEditorVisible = true"
+      />
       <Popover trigger="click" v-model:value="mediaInputVisible" :offset="10">
         <template #content>
-          <MediaInput 
+          <MediaInput
             @close="mediaInputVisible = false"
-            @insertVideo="src => { createVideoElement(src); mediaInputVisible = false }"
-            @insertAudio="src => { createAudioElement(src); mediaInputVisible = false }"
+            @insertVideo="
+              (src) => {
+                createVideoElement(src);
+                mediaInputVisible = false;
+              }
+            "
+            @insertAudio="
+              (src) => {
+                createAudioElement(src);
+                mediaInputVisible = false;
+              }
+            "
           />
         </template>
         <IconVideoTwo class="handler-item" v-tooltip="'插入音视频'" />
       </Popover>
-      <IconSymbol class="handler-item" :class="{ 'active': showSymbolPanel }" v-tooltip="'插入符号'" @click="toggleSymbolPanel()" />
+      <IconSymbol
+        class="handler-item"
+        :class="{ active: showSymbolPanel }"
+        v-tooltip="'插入符号'"
+        @click="toggleSymbolPanel()"
+      />
     </div>
 
     <div class="right-handler">
-      <IconMinus class="handler-item viewport-size" v-tooltip="'画布缩小（Ctrl + -）'" @click="scaleCanvas('-')" />
+      <IconMinus
+        class="handler-item viewport-size"
+        v-tooltip="'画布缩小（Ctrl + -）'"
+        @click="scaleCanvas('-')"
+      />
       <Popover trigger="click" v-model:value="canvasScaleVisible">
         <template #content>
           <PopoverMenuItem
             center
-            v-for="item in canvasScalePresetList" 
-            :key="item" 
+            v-for="item in canvasScalePresetList"
+            :key="item"
             @click="applyCanvasPresetScale(item)"
-          >{{item}}%</PopoverMenuItem>
-          <PopoverMenuItem center @click="resetCanvas(); canvasScaleVisible = false">适应屏幕</PopoverMenuItem>
+            >{{ item }}%</PopoverMenuItem
+          >
+          <PopoverMenuItem
+            center
+            @click="
+              resetCanvas();
+              canvasScaleVisible = false;
+            "
+            >适应屏幕</PopoverMenuItem
+          >
         </template>
-        <span class="text">{{canvasScalePercentage}}</span>
+        <span class="text">{{ canvasScalePercentage }}</span>
       </Popover>
-      <IconPlus class="handler-item viewport-size" v-tooltip="'画布放大（Ctrl + =）'" @click="scaleCanvas('+')" />
-      <IconFullScreen class="handler-item viewport-size-adaptation" v-tooltip="'适应屏幕（Ctrl + 0）'" @click="resetCanvas()" />
+      <IconPlus
+        class="handler-item viewport-size"
+        v-tooltip="'画布放大（Ctrl + =）'"
+        @click="scaleCanvas('+')"
+      />
+      <IconFullScreen
+        class="handler-item viewport-size-adaptation"
+        v-tooltip="'适应屏幕（Ctrl + 0）'"
+        @click="resetCanvas()"
+      />
     </div>
 
-    <Modal
-      v-model:visible="latexEditorVisible"
-      :width="880"
-    >
+    <Modal v-model:visible="latexEditorVisible" :width="880">
       <LaTeXEditor
         @close="latexEditorVisible = false"
-        @update="data => { createLatexElement(data); latexEditorVisible = false }"
+        @update="
+          (data) => {
+            createLatexElement(data);
+            latexEditorVisible = false;
+          }
+        "
       />
     </Modal>
 
@@ -132,56 +321,72 @@
       v-model:visible="optimizeSlideDialogVisible"
       @close="optimizeSlideDialogVisible = false"
     />
+
+    <!-- OCR引擎选择器 -->
+    <OCREngineSelector
+      v-model:visible="ocrEngineSelectorVisible"
+      :loading="parsingImage"
+      @confirm="handleOCREngineConfirm"
+    />
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useMainStore, useSlidesStore, useSnapshotStore } from '@/store'
-import { getImageDataURL } from '@/utils/image'
-import type { ShapePoolItem } from '@/configs/shapes'
-import type { LinePoolItem } from '@/configs/lines'
-import useScaleCanvas from '@/hooks/useScaleCanvas'
-import useHistorySnapshot from '@/hooks/useHistorySnapshot'
-import useCreateElement from '@/hooks/useCreateElement'
-import message from '@/utils/message'
+import { ref } from "vue";
+import { storeToRefs } from "pinia";
+import { useMainStore, useSlidesStore, useSnapshotStore } from "@/store";
+import { getImageDataURL } from "@/utils/image";
+import type { ShapePoolItem } from "@/configs/shapes";
+import type { LinePoolItem } from "@/configs/lines";
+import useScaleCanvas from "@/hooks/useScaleCanvas";
+import useHistorySnapshot from "@/hooks/useHistorySnapshot";
+import useCreateElement from "@/hooks/useCreateElement";
+import message from "@/utils/message";
 
-import ShapePool from './ShapePool.vue'
-import LinePool from './LinePool.vue'
-import ChartPool from './ChartPool.vue'
-import TableGenerator from './TableGenerator.vue'
-import MediaInput from './MediaInput.vue'
-import LaTeXEditor from '@/components/LaTeXEditor/index.vue'
-import ImageManagerDialog from '@/components/image/ImageManagerDialog.vue'
-import FileInput from '@/components/FileInput.vue'
-import OptimizeSlideDialog from '../OptimizeSlideDialog.vue'
-import Modal from '@/components/Modal.vue'
-import Divider from '@/components/Divider.vue'
-import Popover from '@/components/Popover.vue'
-import PopoverMenuItem from '@/components/PopoverMenuItem.vue'
+import ShapePool from "./ShapePool.vue";
+import LinePool from "./LinePool.vue";
+import ChartPool from "./ChartPool.vue";
+import TableGenerator from "./TableGenerator.vue";
+import MediaInput from "./MediaInput.vue";
+import LaTeXEditor from "@/components/LaTeXEditor/index.vue";
+import ImageManagerDialog from "@/components/image/ImageManagerDialog.vue";
+import FileInput from "@/components/FileInput.vue";
+import OptimizeSlideDialog from "../OptimizeSlideDialog.vue";
+import OCREngineSelector from "@/components/OCREngineSelector.vue";
+import Modal from "@/components/Modal.vue";
+import Divider from "@/components/Divider.vue";
+import Popover from "@/components/Popover.vue";
+import PopoverMenuItem from "@/components/PopoverMenuItem.vue";
 
-const mainStore = useMainStore()
-const slidesStore = useSlidesStore()
-const { creatingElement, creatingCustomShape, showSelectPanel, showSearchPanel, showNotesPanel, showSymbolPanel, showImageManager } = storeToRefs(mainStore)
-const { canUndo, canRedo } = storeToRefs(useSnapshotStore())
+const mainStore = useMainStore();
+const slidesStore = useSlidesStore();
+const {
+  creatingElement,
+  creatingCustomShape,
+  showSelectPanel,
+  showSearchPanel,
+  showNotesPanel,
+  showSymbolPanel,
+  showImageManager,
+} = storeToRefs(mainStore);
+const { canUndo, canRedo } = storeToRefs(useSnapshotStore());
 
-const { redo, undo } = useHistorySnapshot()
+const { redo, undo } = useHistorySnapshot();
 
 const {
   scaleCanvas,
   setCanvasScalePercentage,
   resetCanvas,
   canvasScalePercentage,
-} = useScaleCanvas()
+} = useScaleCanvas();
 
-const canvasScalePresetList = [200, 150, 125, 100, 75, 50]
-const canvasScaleVisible = ref(false)
+const canvasScalePresetList = [200, 150, 125, 100, 75, 50];
+const canvasScaleVisible = ref(false);
 
 const applyCanvasPresetScale = (value: number) => {
-  setCanvasScalePercentage(value)
-  canvasScaleVisible.value = false
-}
+  setCanvasScalePercentage(value);
+  canvasScaleVisible.value = false;
+};
 
 const {
   createImageElement,
@@ -190,218 +395,276 @@ const {
   createLatexElement,
   createVideoElement,
   createAudioElement,
-} = useCreateElement()
+} = useCreateElement();
 
 const handleImageInsert = (image: any) => {
-  createImageElement(image)
-  mainStore.setImageManagerState(false)
-}
+  createImageElement(image);
+  mainStore.setImageManagerState(false);
+};
 
 const openImageManager = () => {
-  mainStore.setImageManagerState(true)
-}
+  mainStore.setImageManagerState(true);
+};
 
-
-const shapePoolVisible = ref(false)
-const linePoolVisible = ref(false)
-const chartPoolVisible = ref(false)
-const tableGeneratorVisible = ref(false)
-const mediaInputVisible = ref(false)
-const latexEditorVisible = ref(false)
-const textTypeSelectVisible = ref(false)
-const shapeMenuVisible = ref(false)
-const moreVisible = ref(false)
-const optimizeSlideDialogVisible = ref(false)
+const shapePoolVisible = ref(false);
+const linePoolVisible = ref(false);
+const chartPoolVisible = ref(false);
+const tableGeneratorVisible = ref(false);
+const mediaInputVisible = ref(false);
+const latexEditorVisible = ref(false);
+const textTypeSelectVisible = ref(false);
+const shapeMenuVisible = ref(false);
+const moreVisible = ref(false);
+const optimizeSlideDialogVisible = ref(false);
 
 // 绘制文字范围
 const drawText = (vertical = false) => {
   mainStore.setCreatingElement({
-    type: 'text',
+    type: "text",
     vertical,
-  })
-}
+  });
+};
 
 // 绘制形状范围
 const drawShape = (shape: ShapePoolItem) => {
   mainStore.setCreatingElement({
-    type: 'shape',
+    type: "shape",
     data: shape,
-  })
-  shapePoolVisible.value = false
-}
+  });
+  shapePoolVisible.value = false;
+};
 // 绘制自定义任意多边形
 const drawCustomShape = () => {
-  mainStore.setCreatingCustomShapeState(true)
-  shapePoolVisible.value = false
-}
+  mainStore.setCreatingCustomShapeState(true);
+  shapePoolVisible.value = false;
+};
 
 // 绘制线条路径
 const drawLine = (line: LinePoolItem) => {
   mainStore.setCreatingElement({
-    type: 'line',
+    type: "line",
     data: line,
-  })
-  linePoolVisible.value = false
-}
+  });
+  linePoolVisible.value = false;
+};
 
 // 打开选择面板
 const toggleSelectPanel = () => {
-  mainStore.setSelectPanelState(!showSelectPanel.value)
-}
+  mainStore.setSelectPanelState(!showSelectPanel.value);
+};
 
 // 打开搜索替换面板
 const toggleSraechPanel = () => {
-  mainStore.setSearchPanelState(!showSearchPanel.value)
-}
+  mainStore.setSearchPanelState(!showSearchPanel.value);
+};
 
 // 打开批注面板
 const toggleNotesPanel = () => {
-  mainStore.setNotesPanelState(!showNotesPanel.value)
-}
+  mainStore.setNotesPanelState(!showNotesPanel.value);
+};
 
 // 打开符号面板
 const toggleSymbolPanel = () => {
-  mainStore.setSymbolPanelState(!showSymbolPanel.value)
-}
+  mainStore.setSymbolPanelState(!showSymbolPanel.value);
+};
 
 // 打开优化幻灯片对话框
 const openOptimizeSlideDialog = () => {
-  optimizeSlideDialogVisible.value = true
-}
+  optimizeSlideDialogVisible.value = true;
+};
 
 // 图片解析功能（使用混合OCR + 文字去除）
-import imageEditingService from '@/services/imageEditingService'
-import type { HybridTextRegion } from '@/types/imageEditing'
+import imageEditingService from "@/services/imageEditingService";
+import type { HybridTextRegion, ImageRegion } from "@/types/imageEditing";
 import {
   insertOCRElementsAsEditable,
+  insertImageElements,
   hasImageForOCR,
   getImageCOSKeyForOCR,
-  getSlideId
-} from '@/utils/ocrElementInsert'
+  getSlideId,
+} from "@/utils/ocrElementInsert";
 
-const parsingImage = ref(false)
+const parsingImage = ref(false);
+const ocrEngineSelectorVisible = ref(false);
+
+// 打开OCR引擎选择器
+const openOCREngineSelector = () => {
+  // 检查是否有可识别的图片
+  if (!hasImageForOCR()) {
+    message.warning("请先选中一张图片，或确保幻灯片有背景图片");
+    return;
+  }
+  ocrEngineSelectorVisible.value = true;
+};
+
+// 处理OCR引擎选择确认
+const handleOCREngineConfirm = async (
+  engine: "mineru" | "hybrid_ocr",
+  options: any,
+) => {
+  ocrEngineSelectorVisible.value = false;
+  await parseImage(engine, options);
+};
 
 /**
- * 解析当前幻灯片图片中的文字（使用混合OCR + 文字去除）
+ * 解析当前幻灯片图片中的文字
+ * @param engine OCR引擎：mineru | hybrid_ocr
+ * @param options 识别选项
  */
-const parseImage = async () => {
+const parseImage = async (
+  engine: "mineru" | "hybrid_ocr" = "hybrid_ocr",
+  options: any = {},
+) => {
   // 检查是否有可识别的图片（优先使用选中的图片元素）
   if (!hasImageForOCR()) {
-    message.warning('请先选中一张图片，或确保幻灯片有背景图片')
-    return
+    message.warning("请先选中一张图片，或确保幻灯片有背景图片");
+    return;
   }
 
   // 获取图片的 COS Key
-  const imageInfo = getImageCOSKeyForOCR()
+  const imageInfo = getImageCOSKeyForOCR();
   if (!imageInfo) {
-    message.error('无法获取图片信息')
-    return
+    message.error("无法获取图片信息");
+    return;
   }
 
-  const { cosKey, source } = imageInfo
+  const { cosKey, source } = imageInfo;
 
   // 根据图片来源显示不同的提示信息
-  const sourceText = source === 'selected' ? '选中的图片' : '背景图片'
+  const sourceText = source === "selected" ? "选中的图片" : "背景图片";
+  const engineName = engine === "mineru" ? "MinerU" : "混合OCR";
 
   // 获取幻灯片ID
-  const slideId = getSlideId()
+  const slideId = getSlideId();
 
   try {
-    parsingImage.value = true
-    message.info(`正在使用混合OCR解析${sourceText}并去除文字...`)
+    parsingImage.value = true;
+    message.info(`正在使用${engineName}解析${sourceText}...`);
 
-    // 调用完整编辑API（OCR + 文字去除）
-    const response = await imageEditingService.parseAndRemoveText(slideId, cosKey)
+    let response: any;
+
+    if (engine === "mineru") {
+      // 使用MinerU识别
+      response = await imageEditingService.parseWithMinerU(slideId, cosKey, {
+        enable_formula: options.enable_formula !== false,
+        enable_table: options.enable_table !== false,
+        enable_style_recognition: options.enable_style !== false,
+        remove_text: options.remove_text || false,
+      });
+    } else {
+      // 使用混合OCR识别
+      if (options.remove_text) {
+        response = await imageEditingService.parseAndRemoveText(
+          slideId,
+          cosKey,
+          undefined,
+          "hybrid_ocr",
+        );
+      } else {
+        response = await imageEditingService.parseWithHybridOCR(
+          slideId,
+          cosKey,
+        );
+      }
+    }
 
     // 轮询获取结果
     const result = await imageEditingService.pollEditingResult(
       response.task_id,
       (progress, status) => {
-        // 进度回调（可选：可以在UI上显示进度）
-        console.log(`图片编辑进度: ${progress}% - ${status}`)
-      }
-    )
+        console.log(`图片识别进度: ${progress}% - ${status}`);
+      },
+    );
 
     if (!result.ocr_result || !result.ocr_result.text_regions) {
-      message.error('解析结果为空')
-      return
+      message.error("解析结果为空");
+      return;
     }
 
-    // 应用完整的编辑结果（替换图片组件 + 创建文字元素）
+    // 应用编辑结果（替换图片组件 + 创建文字元素 + 插入装饰元素）
     // 步骤1: 如果有去除文字后的图片，更新图片组件
     if (result.edited_image && result.edited_image.edited_cos_key) {
-      const editedCosKey = result.edited_image.edited_cos_key
-      const currentSlide = slidesStore.currentSlide
-      
+      const editedCosKey = result.edited_image.edited_cos_key;
+      const currentSlide = slidesStore.currentSlide;
+
       if (currentSlide) {
-        // 查找当前图片元素（通过cosKey匹配）
         const imageElement = currentSlide.elements.find((el: any) => {
-          return el.type === 'image' && 
-                 el.imageInfo?.cosKey === cosKey
-        }) as any
-        
+          return el.type === "image" && el.imageInfo?.cosKey === cosKey;
+        }) as any;
+
         if (imageElement) {
-          // 更新图片元素的src和imageInfo
           slidesStore.updateElement({
             id: imageElement.id,
             props: {
               src: editedCosKey,
               imageInfo: {
                 ...imageElement.imageInfo,
-                cosKey: editedCosKey
-              }
-            }
-          })
-          message.info('图片已更新（文字已去除）')
-        } else {
-          message.warning('未找到对应的图片元素')
+                cosKey: editedCosKey,
+              },
+            },
+          });
+          message.info("图片已更新（文字已去除）");
         }
       }
     }
 
     // 步骤2: 创建文字元素
-    const regions = convertHybridToTextRegion(result.ocr_result.text_regions)
+    const regions = convertHybridToTextRegion(result.ocr_result.text_regions);
     insertOCRElementsAsEditable(regions, result.task_id, {
       cosKey,
       source,
-      ocrImageSize: result.ocr_result.metadata?.traditional_count
-        ? undefined
-        : undefined,
-      objectFit: 'cover',
-    })
+      objectFit: "cover",
+    });
 
-    // 步骤3: 记录操作并添加到历史记录
-    const { addHistorySnapshot } = useHistorySnapshot()
-    addHistorySnapshot()
+    // 步骤3: 插入装饰元素（如果有）
+    if (
+      result.ocr_result.image_regions &&
+      result.ocr_result.image_regions.length > 0
+    ) {
+      insertImageElements(result.ocr_result.image_regions, {
+        cosKey,
+        source,
+        objectFit: "cover",
+      });
+    }
 
-    const textCount = result.ocr_result.metadata.text_count
-    const hasEditedImage = result.edited_image ? '并已去除文字' : ''
-    message.success(`图片编辑完成！识别到 ${textCount} 个文字区域${hasEditedImage}`)
+    // 步骤4: 记录操作并添加到历史记录
+    const { addHistorySnapshot } = useHistorySnapshot();
+    addHistorySnapshot();
+
+    // 获取文字数量（兼容两种metadata类型）
+    const textCount =
+      "text_count" in result.ocr_result.metadata
+        ? result.ocr_result.metadata.text_count
+        : result.ocr_result.text_regions.length;
+    const imageCount = result.ocr_result.image_regions?.length || 0;
+    const hasEditedImage = result.edited_image ? "并已去除文字" : "";
+    const imageInfoText = imageCount > 0 ? `、${imageCount} 个装饰元素` : "";
+    message.success(
+      `${engineName}识别完成！识别到 ${textCount} 个文字区域${imageInfoText}${hasEditedImage}`,
+    );
+  } catch (error: any) {
+    message.error(`解析失败：${error.message || "未知错误"}`);
+    console.error("图片识别失败:", error);
+  } finally {
+    parsingImage.value = false;
   }
-  catch (error: any) {
-    message.error(`解析失败：${error.message || '未知错误'}`)
-    console.error('图片编辑失败:', error)
-  }
-  finally {
-    parsingImage.value = false
-  }
-}
+};
 
 /**
  * 将混合OCR结果转换为兼容的TextRegion格式
  */
 function convertHybridToTextRegion(hybridRegions: HybridTextRegion[]) {
-  // 混合OCR的格式与TextRegion兼容，确保font.align有默认值
-  return hybridRegions.map(region => ({
+  return hybridRegions.map((region) => ({
     id: region.id,
     text: region.text,
     bbox: region.bbox,
     confidence: region.confidence,
     font: {
       ...region.font,
-      align: region.font.align || 'left'
-    }
-  }))
+      align: region.font.align || "left",
+    },
+  }));
 }
 </script>
 
@@ -416,7 +679,8 @@ function convertHybridToTextRegion(hybridRegions: HybridTextRegion[]) {
   font-size: 13px;
   user-select: none;
 }
-.left-handler, .more {
+.left-handler,
+.more {
   display: flex;
   align-items: center;
 }
@@ -449,7 +713,8 @@ function convertHybridToTextRegion(hybridRegions: HybridTextRegion[]) {
         background-color: #f3f3f3;
       }
 
-      .icon, .arrow {
+      .icon,
+      .arrow {
         height: 100%;
         display: flex;
         justify-content: center;
@@ -489,10 +754,11 @@ function convertHybridToTextRegion(hybridRegions: HybridTextRegion[]) {
   cursor: pointer;
 
   &.disable {
-    opacity: .5;
+    opacity: 0.5;
   }
 }
-.left-handler, .right-handler {
+.left-handler,
+.right-handler {
   .handler-item {
     padding: 0 8px;
 
@@ -536,7 +802,8 @@ function convertHybridToTextRegion(hybridRegions: HybridTextRegion[]) {
   }
 }
 @media screen and (width <= 1000px) {
-  .left-handler, .right-handler {
+  .left-handler,
+  .right-handler {
     display: none;
   }
 }
