@@ -40,6 +40,10 @@ export interface ImageSourceInfo {
   cosKey: string;
   source: "selected" | "background";
   objectFit?: "cover" | "contain";
+  metadata?: {
+    image_width?: number;
+    image_height?: number;
+  };
 }
 
 /**
@@ -202,7 +206,13 @@ function getCoordTransformConfig(
   let imageWidth = 1920;
   let imageHeight = 1080;
 
-  if (sourceInfo.source === "selected") {
+  // 优先使用metadata中的图片尺寸（这是OCR识别时的真实图片尺寸）
+  if (sourceInfo.metadata?.image_width && sourceInfo.metadata?.image_height) {
+    imageWidth = sourceInfo.metadata.image_width;
+    imageHeight = sourceInfo.metadata.image_height;
+    console.log('[图片尺寸] 使用metadata中的真实尺寸:', { imageWidth, imageHeight });
+  } else if (sourceInfo.source === "selected") {
+    // 如果没有metadata，尝试从选中的图片元素获取（注意：这可能不是原始尺寸）
     const mainStore = useMainStore();
     const { handleElementId } = storeToRefs(mainStore);
 
@@ -211,22 +221,33 @@ function getCoordTransformConfig(
         (el) => el.id === handleElementId.value,
       );
       if (selectedElement?.type === "image") {
+        // 注意：这里获取的是元素在画布上的尺寸，可能不是原始图片尺寸
+        // 但作为fallback仍然有用
         imageWidth = selectedElement.width || 1920;
         imageHeight = selectedElement.height || 1080;
+        console.warn('[图片尺寸] 使用元素尺寸（可能不准确）:', { imageWidth, imageHeight });
       }
     }
   } else if (
     sourceInfo.source === "background" &&
     currentSlide.background?.type === "image"
   ) {
-    // 背景图片尺寸可能需要从图片本身获取，这里使用默认值
+    // 背景图片尺寸使用默认值
     imageWidth = 1920;
     imageHeight = 1080;
+    console.warn('[图片尺寸] 使用默认值:', { imageWidth, imageHeight });
   }
 
   // 从 slides store 获取 viewportSize
   const viewportSize = (slidesStore as any).viewportSize || 1000;
   const viewportRatio = (slidesStore as any).viewportRatio || 0.5625;
+
+  console.log('[坐标转换配置]', {
+    imageSize: { width: imageWidth, height: imageHeight },
+    viewportSize,
+    viewportRatio,
+    objectFit: sourceInfo.objectFit || 'cover'
+  });
 
   return {
     imageSize: { width: imageWidth, height: imageHeight },
@@ -254,6 +275,8 @@ export function insertOCRElementsAsEditable(
   const config = getCoordTransformConfig(sourceInfo);
 
   const newElements: PPTElement[] = regions.map((region) => {
+    // 关键修复：不应用文本盒模型补偿（applyTextBoxModel = false）
+    // 因为OCR识别的bbox已经是文字区域的精确边界，不需要补偿
     const position = convertMinerUBBoxToElementRect(
       [
         region.bbox.x,
@@ -262,7 +285,19 @@ export function insertOCRElementsAsEditable(
         region.bbox.y + region.bbox.height,
       ],
       config,
+      false, // 禁用文本盒模型补偿
     );
+
+    // 调试日志：记录坐标转换过程
+    console.log('[OCR坐标转换]', {
+      originalBBox: region.bbox,
+      imageSize: config.imageSize,
+      viewportSize: config.viewportSize,
+      viewportRatio: config.viewportRatio,
+      objectFit: sourceInfo.objectFit || 'cover',
+      convertedPosition: position,
+      text: region.text.substring(0, 20) // 只记录前20个字符
+    });
 
     return createTextElement(region, position);
   });
@@ -293,6 +328,7 @@ export function insertImageElements(
   const config = getCoordTransformConfig(sourceInfo);
 
   const newElements: PPTElement[] = regions.map((region) => {
+    // 装饰元素也不需要文本盒模型补偿
     const position = convertMinerUBBoxToElementRect(
       [
         region.bbox.x,
@@ -301,6 +337,7 @@ export function insertImageElements(
         region.bbox.y + region.bbox.height,
       ],
       config,
+      false, // 禁用文本盒模型补偿
     );
 
     return createImageElement(region, position, sourceInfo);

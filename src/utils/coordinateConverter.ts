@@ -150,6 +150,11 @@ export const convertMinerUBBoxToElementRect = convertOCRBBoxToElementRect;
 /**
  * 将bbox映射到目标矩形
  * 支持object-fit: cover和contain模式
+ *
+ * 坐标转换原理：
+ * - object-fit: cover时，图片会缩放到完全覆盖容器，超出部分被裁剪
+ * - object-fit: contain时，图片会缩放到完全显示在容器内，可能有留白
+ * - 图片始终居中对齐（object-position: center）
  */
 function mapBBoxToTargetRect(
   bbox: { x: number; y: number; width: number; height: number },
@@ -180,6 +185,11 @@ function mapBBoxToTargetRect(
 
   const renderedW = srcW * scale;
   const renderedH = srcH * scale;
+
+  // 关键修复：offset是图片相对于容器的偏移（裁剪或留白）
+  // 当renderedW > dstW时，图片被裁剪，offsetX是裁剪量（正值）
+  // 当renderedW < dstW时，有留白，offsetX是留白量（正值）
+  // 原图坐标(0,0)在容器中的位置是(-offsetX, -offsetY)
   const offsetX = (renderedW - dstW) / 2;
   const offsetY = (renderedH - dstH) / 2;
 

@@ -81,6 +81,9 @@ export interface HybridOCRMetadata {
   merged_count: number;
   created_at: string;
   completed_at: string;
+  // 图片尺寸信息（用于坐标转换）
+  image_width?: number;
+  image_height?: number;
 }
 
 /**

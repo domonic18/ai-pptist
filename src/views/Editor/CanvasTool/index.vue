@@ -614,6 +614,10 @@ const parseImage = async (
       cosKey,
       source,
       objectFit: "cover",
+      metadata: {
+        image_width: result.ocr_result.metadata?.image_width,
+        image_height: result.ocr_result.metadata?.image_height,
+      },
     });
 
     // 步骤3: 插入装饰元素（如果有）
@@ -625,6 +629,10 @@ const parseImage = async (
         cosKey,
         source,
         objectFit: "cover",
+        metadata: {
+          image_width: result.ocr_result.metadata?.image_width,
+          image_height: result.ocr_result.metadata?.image_height,
+        },
       });
     }
 
