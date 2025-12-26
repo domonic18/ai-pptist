@@ -92,7 +92,7 @@
         <div class="options-title">通用选项</div>
         <div class="option-item">
           <Checkbox v-model:value="options.remove_text"
-            >去除文字后创建新图片</Checkbox
+            >去除文字和装饰元素</Checkbox
           >
         </div>
       </div>
@@ -143,7 +143,7 @@ const options = ref<OCROptions>({
   enable_formula: true,
   enable_table: true,
   enable_style: true,
-  remove_text: false,
+  remove_text: true,  // 改为默认勾选
 });
 
 watch(
