@@ -1,11 +1,12 @@
 /**
  * OCR结果元素插入工具
- * 将OCR识别结果转换为可编辑的幻灯片元素（遮罩 + 文字）
+ * 将OCR识别结果转换为可编辑的幻灯片文字元素
+ * 注意：图片已通过文生图去除文字，不需要再添加遮罩
  */
 
 import { nanoid } from 'nanoid'
 import { useMainStore, useSlidesStore } from '@/store'
-import type { PPTShapeElement, PPTTextElement, PPTImageElement } from '@/types/slides'
+import type { PPTTextElement, PPTImageElement } from '@/types/slides'
 import type { TextRegion } from '@/types/imageParsing'
 
 type Rect = { left: number; top: number; width: number; height: number }
@@ -19,19 +20,13 @@ type OcrInsertOptions = {
    */
   source?: 'selected' | 'background'
   /**
-   * OCR识别所用“原图”的实际像素尺寸（后端PIL检测得到）
+   * OCR识别所用"原图"的实际像素尺寸（后端PIL检测得到）
    */
   ocrImageSize?: { width: number; height: number }
   /**
    * 与SmartImage保持一致：object-fit: cover + object-position: center
    */
   objectFit?: 'cover' | 'contain'
-}
-
-// 矩形形状的路径配置（复用shapes.ts中的配置）
-const RECT_SHAPE = {
-  viewBox: [200, 200] as [number, number],
-  path: 'M 0 0 L 200 0 L 200 200 L 0 200 Z',
 }
 
 function find_image_element_by_cos_key(elements: any[], cosKey: string): PPTImageElement | undefined {
@@ -84,9 +79,8 @@ function map_bbox_to_target_rect(
 }
 
 /**
- * 将OCR识别结果插入为可编辑元素
- * 每个文字区域创建两个元素：白色遮罩shape + 可编辑text
- * 两者通过groupId绑定，移动/缩放/旋转天然同步
+ * 将OCR识别结果插入为可编辑文字元素
+ * 注意：由于图片已通过文生图去除文字，不需要再添加遮罩
  *
  * @param regions OCR识别的文字区域列表
  * @param taskId 任务ID（用于生成唯一ID）
@@ -126,7 +120,7 @@ export function insertOCRElementsAsEditable(
     }
   }
 
-  // 原图尺寸：优先使用后端PIL检测值；否则退化为“目标矩形尺寸”
+  // 原图尺寸：优先使用后端PIL检测值；否则退化为"目标矩形尺寸"
   const srcImageSize = options.ocrImageSize?.width && options.ocrImageSize?.height
     ? { width: options.ocrImageSize.width, height: options.ocrImageSize.height }
     : { width: targetRect.width, height: targetRect.height }
@@ -139,38 +133,16 @@ export function insertOCRElementsAsEditable(
 
   // 遍历所有文字区域
   for (const region of regions) {
-    // 生成唯一的groupId，将遮罩和文字绑定在一起
-    const groupId = `ocr_group_${taskId}_${region.id}`
-
     const mapped = map_bbox_to_target_rect(region.bbox, targetRect, srcImageSize, objectFit)
     const left = mapped.left
     const top = mapped.top
     const width = mapped.width
     const height = mapped.height
 
-    // 生成遮罩和文字元素的ID
-    const maskId = `ocr_mask_${taskId}_${region.id}`
+    // 生成文字元素的ID
     const textId = `ocr_text_${taskId}_${region.id}`
 
-    // 1) 创建白色遮罩shape（先插入，保证位于text下方）
-    const maskEl: PPTShapeElement = {
-      type: 'shape',
-      id: maskId,
-      groupId: groupId,
-      left: left,
-      top: top,
-      width: width,
-      height: height,
-      rotate: 0,
-      viewBox: RECT_SHAPE.viewBox,
-      path: RECT_SHAPE.path,
-      fixedRatio: false,
-      fill: '#ffffff',
-      opacity: 0.85,
-      outline: { width: 0, color: 'transparent' },
-    }
-
-    // 2) 创建可编辑文字元素（覆盖在遮罩之上）
+    // 创建可编辑文字元素
     // 使用多模态OCR模型提供的字体信息
     const font = region.font
     const fontSize = font?.size || 16
@@ -190,7 +162,6 @@ export function insertOCRElementsAsEditable(
     const textEl: PPTTextElement = {
       type: 'text',
       id: textId,
-      groupId: groupId,
       left: left,
       top: top,
       width: width,
@@ -201,8 +172,7 @@ export function insertOCRElementsAsEditable(
       defaultColor: color,
     }
 
-    // 插入元素（先插入遮罩，再插入文字，确保文字在上层）
-    slidesStore.addElement(maskEl)
+    // 插入文字元素
     slidesStore.addElement(textEl)
   }
 
