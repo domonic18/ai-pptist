@@ -138,7 +138,7 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useMainStore, useSnapshotStore } from '@/store'
+import { useMainStore, useSlidesStore, useSnapshotStore } from '@/store'
 import { getImageDataURL } from '@/utils/image'
 import type { ShapePoolItem } from '@/configs/shapes'
 import type { LinePoolItem } from '@/configs/lines'
@@ -162,6 +162,7 @@ import Popover from '@/components/Popover.vue'
 import PopoverMenuItem from '@/components/PopoverMenuItem.vue'
 
 const mainStore = useMainStore()
+const slidesStore = useSlidesStore()
 const { creatingElement, creatingCustomShape, showSelectPanel, showSearchPanel, showNotesPanel, showSymbolPanel, showImageManager } = storeToRefs(mainStore)
 const { canUndo, canRedo } = storeToRefs(useSnapshotStore())
 
@@ -277,9 +278,6 @@ import {
   getImageCOSKeyForOCR,
   getSlideId
 } from '@/utils/ocrElementInsert'
-import { applyImageEditingResult } from '@/utils/imageEditingUtils'
-import { useMainStore } from '@/store'
-import { useSlidesStore } from '@/store'
 
 const parsingImage = ref(false)
 
@@ -329,22 +327,35 @@ const parseImage = async () => {
       return
     }
 
-    // 应用完整的编辑结果（替换背景图片 + 创建文字元素）
-    const mainStore = useMainStore()
-    const slidesStore = useSlidesStore()
-
-    // 步骤1: 如果有去除文字后的图片，替换背景图片
+    // 应用完整的编辑结果（替换图片组件 + 创建文字元素）
+    // 步骤1: 如果有去除文字后的图片，更新图片组件
     if (result.edited_image && result.edited_image.edited_cos_key) {
-      const slide = slidesStore.slides.find((s: any) => s.id === slideId)
-      if (slide) {
-        slidesStore.updateSlide({
-          ...slide,
-          background: {
-            type: 'image',
-            image: result.edited_image.edited_cos_key
-          }
-        })
-        message.info('背景图片已更新（文字已去除）')
+      const editedCosKey = result.edited_image.edited_cos_key
+      const currentSlide = slidesStore.currentSlide
+      
+      if (currentSlide) {
+        // 查找当前图片元素（通过cosKey匹配）
+        const imageElement = currentSlide.elements.find((el: any) => {
+          return el.type === 'image' && 
+                 el.imageInfo?.cosKey === cosKey
+        }) as any
+        
+        if (imageElement) {
+          // 更新图片元素的src和imageInfo
+          slidesStore.updateElement({
+            id: imageElement.id,
+            props: {
+              src: editedCosKey,
+              imageInfo: {
+                ...imageElement.imageInfo,
+                cosKey: editedCosKey
+              }
+            }
+          })
+          message.info('图片已更新（文字已去除）')
+        } else {
+          message.warning('未找到对应的图片元素')
+        }
       }
     }
 
@@ -360,11 +371,8 @@ const parseImage = async () => {
     })
 
     // 步骤3: 记录操作并添加到历史记录
-    mainStore.setEditorState({
-      ...mainStore.editorState,
-      lastImageEditTask: result.task_id
-    })
-    mainStore.addSnapshot()
+    const { addHistorySnapshot } = useHistorySnapshot()
+    addHistorySnapshot()
 
     const textCount = result.ocr_result.metadata.text_count
     const hasEditedImage = result.edited_image ? '并已去除文字' : ''
@@ -383,13 +391,16 @@ const parseImage = async () => {
  * 将混合OCR结果转换为兼容的TextRegion格式
  */
 function convertHybridToTextRegion(hybridRegions: HybridTextRegion[]) {
-  // 混合OCR的格式与TextRegion兼容，直接返回即可
+  // 混合OCR的格式与TextRegion兼容，确保font.align有默认值
   return hybridRegions.map(region => ({
     id: region.id,
     text: region.text,
     bbox: region.bbox,
     confidence: region.confidence,
-    font: region.font
+    font: {
+      ...region.font,
+      align: region.font.align || 'left'
+    }
   }))
 }
 </script>
