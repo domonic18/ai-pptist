@@ -1,5 +1,16 @@
 <template>
-  <div class="canvas-tool">
+  <div>
+    <!-- OCR解析loading蒙层 -->
+    <div v-if="parsingImage" class="ocr-parsing-overlay">
+      <div class="ocr-parsing-content">
+        <el-icon class="is-loading ocr-loading-icon" :size="60">
+          <Loading />
+        </el-icon>
+        <div class="ocr-loading-text">{{ ocrLoadingText }}</div>
+      </div>
+    </div>
+
+    <div class="canvas-tool">
     <div class="left-handler">
       <IconBack
         class="handler-item"
@@ -328,6 +339,7 @@
       :loading="parsingImage"
       @confirm="handleOCREngineConfirm"
     />
+    </div>
   </div>
 </template>
 
@@ -342,6 +354,7 @@ import useScaleCanvas from "@/hooks/useScaleCanvas";
 import useHistorySnapshot from "@/hooks/useHistorySnapshot";
 import useCreateElement from "@/hooks/useCreateElement";
 import message from "@/utils/message";
+import { Loading } from "@element-plus/icons-vue";
 
 import ShapePool from "./ShapePool.vue";
 import LinePool from "./LinePool.vue";
@@ -486,6 +499,7 @@ import {
 
 const parsingImage = ref(false);
 const ocrEngineSelectorVisible = ref(false);
+const ocrLoadingText = ref("正在解析图片...");
 
 // 打开OCR引擎选择器
 const openOCREngineSelector = () => {
@@ -539,7 +553,7 @@ const parseImage = async (
 
   try {
     parsingImage.value = true;
-    message.info(`正在使用${engineName}解析${sourceText}...`);
+    ocrLoadingText.value = `正在使用${engineName}解析${sourceText}，请稍候...`;
 
     let response: any;
 
@@ -573,6 +587,12 @@ const parseImage = async (
       response.task_id,
       (progress, status) => {
         console.log(`图片识别进度: ${progress}% - ${status}`);
+        // 更新loading文本显示进度
+        const statusText = status === 'ocr_processing' ? 'OCR识别中' 
+          : status === 'text_removal' ? '去除文字中' 
+          : status === 'completed' ? '处理完成' 
+          : '处理中';
+        ocrLoadingText.value = `${engineName}解析${sourceText} - ${statusText} (${progress}%)`;
       },
     );
 
@@ -621,10 +641,17 @@ const parseImage = async (
     });
 
     // 步骤3: 插入装饰元素（如果有）
+    console.log('[装饰元素检查]', {
+      hasImageRegions: !!result.ocr_result.image_regions,
+      imageRegionsLength: result.ocr_result.image_regions?.length || 0,
+      imageRegions: result.ocr_result.image_regions
+    });
+
     if (
       result.ocr_result.image_regions &&
       result.ocr_result.image_regions.length > 0
     ) {
+      console.log('[装饰元素] 开始插入', result.ocr_result.image_regions.length, '个装饰图片');
       insertImageElements(result.ocr_result.image_regions, {
         cosKey,
         source,
@@ -634,6 +661,8 @@ const parseImage = async (
           image_height: result.ocr_result.metadata?.image_height,
         },
       });
+    } else {
+      console.warn('[装饰元素] 没有找到装饰图片数据');
     }
 
     // 步骤4: 记录操作并添加到历史记录
@@ -656,6 +685,7 @@ const parseImage = async (
     console.error("图片识别失败:", error);
   } finally {
     parsingImage.value = false;
+    ocrLoadingText.value = "正在解析图片...";
   }
 };
 
@@ -686,6 +716,41 @@ function convertHybridToTextRegion(hybridRegions: HybridTextRegion[]) {
   padding: 0 10px;
   font-size: 13px;
   user-select: none;
+}
+
+// OCR解析loading蒙层
+.ocr-parsing-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(2px);
+}
+
+.ocr-parsing-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.ocr-loading-icon {
+  color: #409eff;
+  font-size: 60px;
+}
+
+.ocr-loading-text {
+  font-size: 16px;
+  color: #fff;
+  font-weight: 500;
+  text-align: center;
+  max-width: 400px;
 }
 .left-handler,
 .more {

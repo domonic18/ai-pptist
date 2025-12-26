@@ -10,7 +10,7 @@ import type {
   PPTImageElement,
   PPTTextElement,
 } from "@/types/slides";
-import type { BoundingBox } from "@/types/imageEditing";
+import type { BoundingBox, ImageRegion } from "@/types/imageEditing";
 import {
   convertMinerUBBoxToElementRect,
   type CoordTransformConfig,
@@ -169,16 +169,9 @@ function createImageElement(
     fixedRatio: false,
     flipH: false,
     flipV: false,
-    shadow: {
-      h: 0,
-      v: 0,
-      blur: 10,
-      color: "#000",
-    },
-    outline: {
-      width: 0,
-      color: "#fff",
-    },
+    // 装饰图片不需要阴影和边框
+    // shadow: undefined,
+    // outline: undefined,
     imageInfo: {
       id: cosKey,
       cosKey: cosKey,
@@ -309,14 +302,14 @@ export function insertOCRElementsAsEditable(
  * 插入装饰元素（图片）
  */
 export function insertImageElements(
-  regions: Array<{
-    id: string;
-    bbox: BoundingBox;
-    cos_key?: string;
-    img_path?: string;
-  }>,
+  regions: ImageRegion[],
   sourceInfo: ImageSourceInfo,
 ): void {
+  console.log('[insertImageElements] 开始处理装饰元素', {
+    regionsCount: regions.length,
+    sourceInfo
+  });
+
   const slidesStore = useSlidesStore();
   const currentSlide = slidesStore.currentSlide;
 
@@ -327,7 +320,7 @@ export function insertImageElements(
 
   const config = getCoordTransformConfig(sourceInfo);
 
-  const newElements: PPTElement[] = regions.map((region) => {
+  const newElements: PPTElement[] = regions.map((region, index) => {
     // 装饰元素也不需要文本盒模型补偿
     const position = convertMinerUBBoxToElementRect(
       [
@@ -340,10 +333,24 @@ export function insertImageElements(
       false, // 禁用文本盒模型补偿
     );
 
-    return createImageElement(region, position, sourceInfo);
+    const imageElement = createImageElement(region, position, sourceInfo);
+
+    console.log(`[装饰元素 ${index + 1}/${regions.length}]`, {
+      id: region.id,
+      type: region.type,
+      bbox: region.bbox,
+      cos_key: region.cos_key,
+      img_path: region.img_path,
+      position,
+      elementSrc: imageElement.src
+    });
+
+    return imageElement;
   });
 
+  console.log('[insertImageElements] 准备添加', newElements.length, '个装饰元素到幻灯片');
   slidesStore.addElement(newElements);
+  console.log('[insertImageElements] 装饰元素添加完成');
 }
 
 /**
@@ -351,12 +358,7 @@ export function insertImageElements(
  */
 export function insertOCRResults(
   textRegions: TextRegion[],
-  imageRegions: Array<{
-    id: string;
-    bbox: BoundingBox;
-    cos_key?: string;
-    img_path?: string;
-  }>,
+  imageRegions: ImageRegion[],
   taskId: string,
   sourceInfo: ImageSourceInfo,
 ): void {
