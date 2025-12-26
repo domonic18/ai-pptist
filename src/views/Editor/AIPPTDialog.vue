@@ -490,7 +490,11 @@ const openBananaTemplateSelector = async () => {
 }
 
 // 处理香蕉模板确认
-const handleBananaTemplateConfirm = async (templateId: string, modelId: string) => {
+const handleBananaTemplateConfirm = async (
+  templateId: string | null,
+  customTemplateUrl: string | null,
+  modelId: string
+) => {
   if (!bananaOutlineData.value) {
     message.error('缺少大纲数据，请重新生成')
     return
@@ -501,7 +505,8 @@ const handleBananaTemplateConfirm = async (templateId: string, modelId: string) 
   // 开始生成
   const success = await startGeneration({
     outline: bananaOutlineData.value,
-    templateId,
+    templateId: templateId || undefined,
+    customTemplateUrl: customTemplateUrl || undefined,
     generationModel: modelId,
     canvasSize: {
       width: Math.round(slideStore.viewportSize),

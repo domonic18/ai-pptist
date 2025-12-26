@@ -62,7 +62,8 @@ export interface SlideGenerationResult {
  */
 export interface GenerateBatchSlidesRequest {
   outline: OutlineData
-  templateId: string
+  templateId?: string
+  customTemplateUrl?: string
   generationModel: string
   canvasSize: {
     width: number

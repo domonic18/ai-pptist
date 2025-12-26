@@ -84,11 +84,18 @@ export const bananaGenerationService = {
     request: GenerateBatchSlidesRequest
   ): Promise<GenerateBatchSlidesResponse> {
     // 转换请求格式：前端使用camelCase，后端使用snake_case
-    const backendRequest = {
+    const backendRequest: Record<string, any> = {
       outline: request.outline,
-      template_id: request.templateId,
       generation_model: request.generationModel,
       canvas_size: request.canvasSize,
+    }
+
+    // 支持系统模板或自定义模板URL
+    if (request.templateId) {
+      backendRequest.template_id = request.templateId
+    }
+    if (request.customTemplateUrl) {
+      backendRequest.custom_template_url = request.customTemplateUrl
     }
 
     const response = await apiRequest<any>(
