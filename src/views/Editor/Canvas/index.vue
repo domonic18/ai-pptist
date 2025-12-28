@@ -126,6 +126,7 @@ import useScaleCanvas from '@/hooks/useScaleCanvas'
 import useScreening from '@/hooks/useScreening'
 import useSlideHandler from '@/hooks/useSlideHandler'
 import useCreateElement from '@/hooks/useCreateElement'
+import useSlideImagePreloader from '@/hooks/useSlideImagePreloader'
 
 import EditableElement from './EditableElement.vue'
 import MouseSelection from './MouseSelection.vue'
@@ -192,6 +193,13 @@ const { pasteElement } = useCopyAndPasteElement()
 const { enterScreeningFromStart } = useScreening()
 const { updateSlideIndex } = useSlideHandler()
 const { createTextElement, createShapeElement } = useCreateElement()
+
+// 幻灯片图片预加载：在切换幻灯片时自动预加载前后幻灯片的图片
+useSlideImagePreloader({
+  preloadRange: 2,  // 预加载前后各 2 张幻灯片
+  concurrent: 4,    // 并发预加载数量
+  delay: 800        // 延迟 800ms 避免影响当前页面渲染
+})
 
 // 组件渲染时，如果存在元素焦点，需要清除
 // 这种情况存在于：有焦点元素的情况下进入了放映模式，再退出时，需要清除原先的焦点（因为可能已经切换了页面）

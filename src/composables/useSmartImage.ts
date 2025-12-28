@@ -6,6 +6,7 @@
 import { ref, shallowRef } from 'vue'
 import { ElMessage } from 'element-plus'
 import { API_CONFIG } from '@/configs/api'
+import { imageCacheService } from '@/services/imageCache'
 
 // 加载状态
 export enum ImageLoadingState {
@@ -312,17 +313,14 @@ export function useSmartImage() {
    * 获取缓存的URL
    */
   async function getCachedUrl(imageKey: string): Promise<string | null> {
-    // TODO: 实现本地缓存逻辑（如IndexedDB）
-    // 现在先返回null，后续可以优化
-    return null
+    return imageCacheService.getCachedUrl(imageKey)
   }
 
   /**
    * 缓存URL
    */
   async function cacheUrl(imageKey: string, url: string): Promise<void> {
-    // TODO: 实现本地缓存逻辑（如IndexedDB）
-    // 现在先不实现
+    imageCacheService.cacheUrl(imageKey, url)
   }
 
   /**
@@ -371,11 +369,27 @@ export function useSmartImage() {
    */
   async function preload(imageKey: string): Promise<boolean> {
     try {
-      await preloadImage(imageKey)
-      return true
+      const proxyUrl = API_CONFIG.IMAGE_PROXY.PROXY(imageKey)
+      return await imageCacheService.preloadImage(imageKey, () => proxyUrl)
     } catch (err) {
       console.error('预加载失败:', err)
       return false
+    }
+  }
+
+  /**
+   * 批量预加载图片
+   */
+  async function preloadBatch(imageKeys: string[], concurrent: number = 3): Promise<number> {
+    try {
+      return await imageCacheService.preloadImages(
+        imageKeys,
+        (key) => API_CONFIG.IMAGE_PROXY.PROXY(key),
+        concurrent
+      )
+    } catch (err) {
+      console.error('批量预加载失败:', err)
+      return 0
     }
   }
 
@@ -459,6 +473,7 @@ export function useSmartImage() {
     retry,
     refresh,
     preload,
+    preloadBatch,
     getStatus,
     getProxyUrl,
     getStats,
