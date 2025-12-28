@@ -491,7 +491,7 @@ export const deleteSpecificImageTag = async (imageId: string, tag: string): Prom
  * 删除标签
  */
 export const deleteTag = async (tagName: string): Promise<void> => {
-  await axios.delete(API_CONFIG.TAGS.DELETE(tagName))
+  await axios.delete(API_CONFIG.TAG_LIBRARY.DELETE(tagName))
 }
 
 /**
@@ -536,7 +536,7 @@ export const getAllTags = async (
     sort_order: sortOrder
   }
 
-  const response = await axios.get(API_CONFIG.TAGS.LIST, { params })
+  const response = await axios.get(API_CONFIG.TAG_LIBRARY.LIST, { params })
   const apiResponse = response as unknown as {status: string, message: string, data: {items: TagItem[], total: number, page: number, limit: number, total_pages: number}}
 
   return {
@@ -552,7 +552,7 @@ export const getAllTags = async (
  * 获取热门标签
  */
 export const getPopularTags = async (limit: number = 10): Promise<PopularTagResponse> => {
-  const response = await axios.get(API_CONFIG.TAGS.POPULAR, { params: { limit } })
+  const response = await axios.get(API_CONFIG.TAG_LIBRARY.POPULAR, { params: { limit } })
   const apiResponse = response as unknown as {status: string, message: string, data: {tags: TagItem[], total: number, limit: number}}
 
   return {
@@ -566,7 +566,7 @@ export const getPopularTags = async (limit: number = 10): Promise<PopularTagResp
  * 搜索标签
  */
 export const searchTags = async (query: string, limit: number = 10): Promise<{tags: TagItem[], total: number, query: string, limit: number}> => {
-  const response = await axios.get(API_CONFIG.TAGS.SEARCH, { params: { query, limit } })
+  const response = await axios.get(API_CONFIG.TAG_LIBRARY.SEARCH, { params: { query, limit } })
   const apiResponse = response as unknown as {status: string, message: string, data: {tags: TagItem[], total: number, query: string, limit: number}}
 
   return apiResponse.data
@@ -576,7 +576,7 @@ export const searchTags = async (query: string, limit: number = 10): Promise<{ta
  * 创建标签
  */
 export const createTag = async (name: string, description?: string): Promise<TagItem> => {
-  const response = await axios.post(API_CONFIG.TAGS.CREATE, { name, description })
+  const response = await axios.post(API_CONFIG.TAG_LIBRARY.CREATE, { name, description })
   const apiResponse = response as unknown as {status: string, message: string, data: {tag: TagItem}}
   return apiResponse.data.tag
 }
