@@ -31,11 +31,11 @@ export const imageParsingService = {
       cos_key: cosKey
     })
 
-    if (response.data.success) {
+    if (response.data.status === 'success') {
       return response.data.data
     }
 
-    throw new Error(response.data.error?.message || '解析失败')
+    throw new Error(response.data.message || '解析失败')
   },
 
   /**
@@ -48,11 +48,11 @@ export const imageParsingService = {
       API_CONFIG.IMAGE_PARSING.STATUS(taskId)
     )
 
-    if (response.data.success) {
+    if (response.data.status === 'success') {
       return response.data.data
     }
 
-    throw new Error(response.data.error?.message || '查询状态失败')
+    throw new Error(response.data.message || '查询状态失败')
   },
 
   /**

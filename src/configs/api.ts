@@ -50,18 +50,18 @@ export const API_CONFIG = {
     BATCH: "/api/v1/images/upload/batch",
   },
 
-  // 标签管理相关API
-  TAGS: {
+  // 标签库管理相关API
+  TAG_LIBRARY: {
     // 获取所有标签
-    LIST: "/api/v1/tags",
+    LIST: "/api/v1/tag-library",
     // 获取热门标签
-    POPULAR: "/api/v1/tags/popular",
+    POPULAR: "/api/v1/tag-library/popular",
     // 搜索标签
-    SEARCH: "/api/v1/tags/search",
+    SEARCH: "/api/v1/tag-library/search",
     // 创建标签
-    CREATE: "/api/v1/tags",
+    CREATE: "/api/v1/tag-library",
     // 删除标签
-    DELETE: (tagName: string) => `/api/v1/tags/${tagName}`,
+    DELETE: (tagName: string) => `/api/v1/tag-library/${tagName}`,
   },
 
   // 图片标签管理相关API

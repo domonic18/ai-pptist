@@ -15,17 +15,12 @@ import type {
 } from '@/types/banana-generation'
 
 /**
- * 标准API响应格式
+ * 标准API响应格式（后端重构后的格式）
  */
 interface StandardResponse<T> {
-  success: boolean
+  status: 'success' | 'error'
+  message: string
   data: T | null
-  error: {
-    message: string
-    code: string
-  } | null
-  timestamp: string
-  request_id: string
 }
 
 /**
@@ -70,8 +65,8 @@ export const bananaGenerationService = {
       }
     )
 
-    if (!response.success || !response.data) {
-      throw new Error(response.error?.message || '大纲拆分失败')
+    if (response.status !== 'success' || !response.data) {
+      throw new Error(response.message || '大纲拆分失败')
     }
 
     return response.data
@@ -106,8 +101,8 @@ export const bananaGenerationService = {
       }
     )
 
-    if (!response.success || !response.data) {
-      throw new Error(response.error?.message || '生成失败')
+    if (response.status !== 'success' || !response.data) {
+      throw new Error(response.message || '生成失败')
     }
 
     // 转换响应格式：后端使用snake_case，前端使用camelCase
@@ -131,8 +126,8 @@ export const bananaGenerationService = {
       }
     )
 
-    if (!response.success || !response.data) {
-      throw new Error(response.error?.message || '查询状态失败')
+    if (response.status !== 'success' || !response.data) {
+      throw new Error(response.message || '查询状态失败')
     }
 
     // 转换响应格式：后端使用snake_case，前端使用camelCase
@@ -162,15 +157,15 @@ export const bananaGenerationService = {
    * 停止生成任务
    */
   async stopGeneration(taskId: string): Promise<StopGenerationResponse> {
-    const response = await apiRequest<StopGenerationResponse>(
+    const response = await apiRequest<any>(
       API_CONFIG.BANANA_GENERATION.STOP_GENERATION(taskId),
       {
         method: 'POST',
       }
     )
 
-    if (!response.success || !response.data) {
-      throw new Error(response.error?.message || '停止生成失败')
+    if (response.status !== 'success' || !response.data) {
+      throw new Error(response.message || '停止生成失败')
     }
 
     return response.data
@@ -194,8 +189,8 @@ export const bananaGenerationService = {
       }
     )
 
-    if (!response.success) {
-      throw new Error(response.error?.message || '重新生成失败')
+    if (response.status !== 'success') {
+      throw new Error(response.message || '重新生成失败')
     }
   },
 
@@ -213,8 +208,8 @@ export const bananaGenerationService = {
       method: 'GET',
     })
 
-    if (!response.success || !response.data) {
-      throw new Error(response.error?.message || '获取模板列表失败')
+    if (response.status !== 'success' || !response.data) {
+      throw new Error(response.message || '获取模板列表失败')
     }
 
     // 转换响应格式：后端使用snake_case，前端使用camelCase

@@ -50,11 +50,11 @@ export const imageEditingService = {
       },
     );
 
-    if (response.data.success) {
+    if (response.data.status === 'success') {
       return response.data.data;
     }
 
-    throw new Error(response.data.error?.message || "MinerU识别失败");
+    throw new Error(response.data.message || "MinerU识别失败");
   },
 
   /**
@@ -75,11 +75,11 @@ export const imageEditingService = {
       },
     );
 
-    if (response.data.success) {
+    if (response.data.status === 'success') {
       return response.data.data;
     }
 
-    throw new Error(response.data.error?.message || "混合OCR识别失败");
+    throw new Error(response.data.message || "混合OCR识别失败");
   },
 
   /**
@@ -106,11 +106,11 @@ export const imageEditingService = {
       },
     );
 
-    if (response.data.success) {
+    if (response.data.status === 'success') {
       return response.data.data;
     }
 
-    throw new Error(response.data.error?.message || "图片编辑失败");
+    throw new Error(response.data.message || "图片编辑失败");
   },
 
   /**
@@ -121,11 +121,11 @@ export const imageEditingService = {
   async getEditingStatus(taskId: string): Promise<EditingStatusResponse> {
     const response = await axios.get(API_CONFIG.IMAGE_EDITING.STATUS(taskId));
 
-    if (response.data.success) {
+    if (response.data.status === 'success') {
       return response.data.data;
     }
 
-    throw new Error(response.data.error?.message || "查询状态失败");
+    throw new Error(response.data.message || "查询状态失败");
   },
 
   /**
