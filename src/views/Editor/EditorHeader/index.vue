@@ -50,8 +50,8 @@
           <PopoverMenuItem class="popover-menu-item" @click="openImageManager()"><IconPicture class="icon" /> 图片资源管理</PopoverMenuItem>
           <PopoverMenuItem class="popover-menu-item" @click="openModelManager()"><IconCode class="icon" /> 模型配置管理</PopoverMenuItem>
           <PopoverMenuItem class="popover-menu-item" @click="mainMenuVisible = false; hotkeyDrawerVisible = true"><IconCommand class="icon" /> 快捷操作</PopoverMenuItem>
-          <PopoverMenuItem class="popover-menu-item" @click="goLink('https://github.com/pipipi-pikachu/PPTist/issues')"><IconComment class="icon" /> 意见反馈</PopoverMenuItem>
-          <PopoverMenuItem class="popover-menu-item" @click="goLink('https://github.com/pipipi-pikachu/PPTist/blob/master/doc/Q&A.md')"><IconHelpcenter class="icon" /> 常见问题</PopoverMenuItem>
+          <PopoverMenuItem class="popover-menu-item" @click="goLink('https://github.com/domonic18/ai-pptist-system/issues')"><IconComment class="icon" /> 意见反馈</PopoverMenuItem>
+          <PopoverMenuItem class="popover-menu-item" @click="goLink('https://github.com/domonic18/ai-pptist-system/blob/master/README.md')"><IconHelpcenter class="icon" /> 常见问题</PopoverMenuItem>
           <Divider :margin="10" />
           <div class="statement">注：本站仅作测试/演示，不提供任何形式的服务</div>
         </template>
@@ -97,7 +97,7 @@
       <div class="menu-item" v-tooltip="'导出'" @click="setDialogForExport('pptx')">
         <IconDownload class="icon" />
       </div>
-      <a class="github-link" v-tooltip="'Copyright © 2020-PRESENT pipipi-pikachu'" href="https://github.com/pipipi-pikachu/PPTist" target="_blank">
+      <a class="github-link" v-tooltip="'AI PPTist System'" href="https://github.com/domonic18/ai-pptist-system" target="_blank">
         <div class="menu-item"><IconGithub class="icon" /></div>
       </a>
     </div>
