@@ -97,6 +97,8 @@
       <div class="menu-item" v-tooltip="'导出'" @click="setDialogForExport('pptx')">
         <IconDownload class="icon" />
       </div>
+      <!-- 用户下拉菜单 -->
+      <UserDropdown />
       <a class="github-link" v-tooltip="'AI PPTist System'" href="https://github.com/domonic18/ai-pptist-system" target="_blank">
         <div class="menu-item"><IconGithub class="icon" /></div>
       </a>
@@ -149,6 +151,7 @@ import PopoverMenuItem from '@/components/PopoverMenuItem.vue'
 import Divider from '@/components/Divider.vue'
 import Modal from '@/components/Modal.vue'
 import ImageManager from '@/components/image/ImageManager.vue'
+import UserDropdown from '@/components/UserDropdown.vue'
 
 const mainStore = useMainStore()
 const slidesStore = useSlidesStore()
