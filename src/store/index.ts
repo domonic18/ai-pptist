@@ -4,6 +4,7 @@ import { useSnapshotStore } from './snapshot'
 import { useKeyboardStore } from './keyboard'
 import { useScreenStore } from './screen'
 import { useModelStore } from './model'
+import { useAuthStore } from './auth'
 
 export {
   useMainStore,
@@ -12,4 +13,5 @@ export {
   useKeyboardStore,
   useScreenStore,
   useModelStore,
+  useAuthStore,
 }

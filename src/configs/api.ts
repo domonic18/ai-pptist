@@ -167,6 +167,26 @@ export const API_CONFIG = {
     STATUS: (taskId: string) => `/api/v1/image_editing/status/${taskId}`,
   },
 
+  // 用户认证相关API
+  AUTH: {
+    // 用户注册
+    REGISTER: "/api/v1/auth/register",
+    // 用户登录
+    LOGIN: "/api/v1/auth/login",
+    // 刷新访问令牌
+    REFRESH: "/api/v1/auth/refresh",
+    // 用户登出
+    LOGOUT: "/api/v1/auth/logout",
+    // 获取当前用户信息
+    ME: "/api/v1/auth/me",
+    // 获取会话列表
+    SESSIONS: "/api/v1/auth/sessions",
+    // 撤销指定会话
+    REVOKE_SESSION: (sessionId: string) => `/api/v1/auth/sessions/${sessionId}/revoke`,
+    // 登出所有设备
+    LOGOUT_ALL: "/api/v1/auth/logout-all",
+  },
+
   // 其他API端点可以根据需要继续添加
 } as const;
 

@@ -138,6 +138,10 @@ import {
   Command,
   SlideTwo,
   Symbol,
+  // 登录/注册页面新增图标
+  Mail,
+  Eyes,
+  Shield,
 } from '@icon-park/vue-next'
 
 export interface Icons {
@@ -281,6 +285,10 @@ export const icons: Icons = {
   IconCommand: Command,
   IconSlideTwo: SlideTwo,
   IconSymbol: Symbol,
+  // 登录/注册页面新增图标
+  IconMail: Mail,
+  IconEyes: Eyes,
+  IconShield: Shield,
 }
 
 export default {

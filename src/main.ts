@@ -13,10 +13,12 @@ import '@/assets/styles/font.scss'
 import Icon from '@/plugins/icon'
 import Directive from '@/plugins/directive'
 import ElementPlus from '@/plugins/element-plus'
+import router from './router'
 
 const app = createApp(App)
 app.use(Icon)
 app.use(Directive)
 app.use(ElementPlus)
 app.use(createPinia())
+app.use(router)
 app.mount('#app')
