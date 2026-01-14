@@ -96,17 +96,15 @@
             <span>或</span>
           </div>
 
-          <!-- SSO 登录按钮（预留） -->
+          <!-- SSO 登录按钮 -->
           <button
             type="button"
-            class="sso-btn"
+            class="sso-btn sso-btn-enabled"
             @click="handleSSOLogin"
-            disabled
-            title="SSO登录功能暂未开放"
+            :disabled="isLoading"
           >
             <span class="sso-icon"><IconShield /></span>
             使用SSO快捷登录
-            <span class="sso-badge">即将推出</span>
           </button>
         </div>
 
@@ -316,10 +314,20 @@ async function handleRegister() {
   }
 }
 
-// 处理 SSO 登录（预留功能）
-function handleSSOLogin() {
-  // TODO: 实现 SSO 登录功能
-  console.log('SSO login not implemented yet')
+// 处理 SSO 登录
+async function handleSSOLogin() {
+  isLoading.value = true
+  try {
+    // 获取当前路由中的重定向参数
+    const redirect = router.currentRoute.value.query.redirect as string
+    // 发起SSO登录，后端会处理重定向到IDP
+    // 登录成功后会跳转到回调页面，然后重定向到这里指定的地址
+    await authStore.initiateSSOLogin(redirect || '/')
+  } catch (error) {
+    console.error('SSO login failed:', error)
+    loginError.value = 'SSO登录失败，请稍后重试'
+    isLoading.value = false
+  }
 }
 </script>
 
@@ -661,6 +669,31 @@ function handleSSOLogin() {
     font-size: 11px;
     font-weight: 600;
     border-radius: 10px;
+  }
+
+  // SSO按钮启用状态
+  &.sso-btn-enabled {
+    border-style: solid;
+    border-color: #667eea;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    color: #667eea;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
   }
 }
 </style>

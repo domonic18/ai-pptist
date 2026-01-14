@@ -13,6 +13,7 @@ const Screen = () => import('@/views/Screen/index.vue')
 const Mobile = () => import('@/views/Mobile/index.vue')
 const ImageGeneration = () => import('@/views/ImageGeneration/index.vue')
 const Login = () => import('@/views/Auth/Login.vue')
+const SSOCallback = () => import('@/views/Auth/SSOCallback.vue')
 
 // 路由定义
 const routes: RouteRecordRaw[] = [
@@ -24,6 +25,17 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: false,
       title: '登录 - AI-PPTist',
+    },
+  },
+
+  // SSO回调页（无需认证，处理SSO登录后的Token）
+  {
+    path: '/sso-callback',
+    name: 'SSOCallback',
+    component: SSOCallback,
+    meta: {
+      requiresAuth: false,
+      title: 'SSO登录 - AI-PPTist',
     },
   },
 

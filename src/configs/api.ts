@@ -185,6 +185,16 @@ export const API_CONFIG = {
     REVOKE_SESSION: (sessionId: string) => `/api/v1/auth/sessions/${sessionId}/revoke`,
     // 登出所有设备
     LOGOUT_ALL: "/api/v1/auth/logout-all",
+    // SSO单点登录 - 发起SSO登录
+    SSO_INIT: "/api/v1/auth/sso/init",
+    // SSO单点登录 - 处理SAML响应（ACS端点）
+    SSO_ACS: "/api/v1/auth/sso/acs",
+    // SSO单点登录 - 发起单点登出
+    SSO_SLO: "/api/v1/auth/sso/slo",
+    // SSO单点登录 - 处理SLO响应
+    SSO_SLS: "/api/v1/auth/sso/sls",
+    // SSO单点登录 - 获取SP元数据
+    SSO_METADATA: "/api/v1/auth/sso/metadata",
   },
 
   // 其他API端点可以根据需要继续添加

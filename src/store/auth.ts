@@ -71,6 +71,38 @@ export const useAuthStore = defineStore('auth', {
     },
 
     /**
+     * SSO单点登录
+     * 重定向到后端SSO端点，由后端处理与IDP的交互
+     * @param returnTo 登录成功后重定向的URL
+     */
+    async initiateSSOLogin(returnTo?: string): Promise<void> {
+      await authService.initiateSSO(returnTo)
+    },
+
+    /**
+     * 处理SSO登录回调
+     * 从URL中获取token并完成登录流程
+     */
+    async handleSSOCallback(): Promise<boolean> {
+      this.isLoading = true
+      try {
+        const response = await authService.handleSSOCallback()
+        if (response) {
+          this.accessToken = response.access_token
+          this.refreshToken = response.refresh_token
+          this.user = response.user
+          return true
+        }
+        return false
+      } catch (error) {
+        this.clearAuth()
+        throw error
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    /**
      * 用户注册
      */
     async register(email: string, name: string, password: string, confirmPassword: string) {
