@@ -130,6 +130,12 @@ export const PROVIDER_OPTIONS: Record<ModelCapability, ProviderOption[]> = {
       description: '支持DeepSeek、智谱AI、Moonshot等'
     },
     {
+      label: '火山引擎豆包',
+      value: 'volcengine',
+      capabilities: ['chat'],
+      description: '火山引擎豆包对话'
+    },
+    {
       label: 'OpenAI',
       value: 'openai',
       capabilities: ['chat'],
@@ -180,6 +186,12 @@ export const PROVIDER_OPTIONS: Record<ModelCapability, ProviderOption[]> = {
       value: 'openai_compatible',
       capabilities: ['image_gen'],
       description: 'OpenAI兼容文生图（支持通过 Chat 或 Standard API 生成）'
+    },
+    {
+      label: '火山引擎豆包',
+      value: 'volcengine',
+      capabilities: ['image_gen'],
+      description: '火山引擎豆包文生图（支持 Seedream 等模型）'
     },
     {
       label: 'Google GenAI',
@@ -267,7 +279,7 @@ export function getProviderTagType(provider: string): 'primary' | 'success' | 'w
     'anthropic': 'info',
     'genai': 'success',
     'qwen': 'danger',
-    'volcengine_ark': 'info',
+    'volcengine': 'info',
     'siliconflow': 'warning',
     'runway': 'danger',
     'pika': 'danger'

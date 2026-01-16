@@ -124,8 +124,8 @@
         </el-form-item>
 
         <!-- Provider配置 -->
-        <el-form-item 
-          v-for="capability in modelForm.capabilities" 
+        <el-form-item
+          v-for="capability in modelForm.capabilities"
           :key="capability"
           :label="`${getCapabilityLabel(capability)} Provider`"
           :prop="`provider_mapping.${capability}`"
@@ -135,6 +135,17 @@
             placeholder="请选择Provider"
             teleported
             popper-class="provider-dropdown"
+            :popper-options="{
+              strategy: 'fixed',
+              modifiers: [
+                {
+                  name: 'flip',
+                  options: {
+                    fallbackPlacements: ['bottom-start', 'top-start'],
+                  },
+                },
+              ],
+            }"
           >
             <el-option
               v-for="provider in getProvidersForCapability(capability)"
@@ -142,7 +153,7 @@
               :label="provider.label"
               :value="provider.value"
             >
-              <div>
+              <div class="provider-option-content">
                 <div class="font-medium">{{ provider.label }}</div>
                 <div class="text-xs text-gray-400 mt-1">{{ provider.description }}</div>
               </div>
@@ -786,13 +797,21 @@ div[role="dialog"][class*="el-overlay-message-box"] {
 .model-type-dropdown,
 .provider-dropdown {
   z-index: 99999 !important;
-  max-height: 200px;
-  overflow-y: auto;
 }
 
+/* Provider 选项内容样式 */
+.provider-option-content {
+  width: 100%;
+  pointer-events: none;
+}
+
+/* 确保下拉选项不会被遮挡 */
 .el-select-dropdown__item {
   padding: 8px 12px;
-  line-height: 20px;
+  line-height: normal;
+  height: auto;
+  min-height: 50px;
+  display: block;
 }
 
 .el-select-dropdown__item:hover {

@@ -126,13 +126,43 @@ export const bananaGenerationService = {
       }
     )
 
+    // 调试日志：查看原始响应
+    console.log('[API] getGenerationStatus 原始响应:', response)
+
     if (response.status !== 'success' || !response.data) {
       throw new Error(response.message || '查询状态失败')
     }
 
     // 转换响应格式：后端使用snake_case，前端使用camelCase
     const backendData = response.data
-    return {
+
+    // 调试日志：查看后端数据
+    console.log('[API] getGenerationStatus 后端数据:', {
+      task_id: backendData.task_id,
+      status: backendData.status,
+      progress: backendData.progress,
+      slides: backendData.slides,
+      slidesLength: backendData.slides?.length,
+      slidesType: typeof backendData.slides
+    })
+
+    const mappedSlides = (backendData.slides || []).map((slide: any) => ({
+      index: slide.index,
+      title: slide.title || '',
+      status: slide.status,
+      imageUrl: slide.image_url,
+      cosPath: slide.cos_path,
+      generationTime: slide.generation_time,
+      error: slide.error,
+    }))
+
+    // 调试日志：查看映射后的数据
+    console.log('[API] getGenerationStatus 映射后的 slides:', {
+      length: mappedSlides.length,
+      slides: mappedSlides
+    })
+
+    const result = {
       taskId: backendData.task_id || taskId,
       status: backendData.status as any,
       progress: {
@@ -141,16 +171,12 @@ export const bananaGenerationService = {
         failed: backendData.progress?.failed || 0,
         pending: backendData.progress?.pending || 0,
       },
-      slides: (backendData.slides || []).map((slide: any) => ({
-        index: slide.index,
-        title: slide.title || '',
-        status: slide.status,
-        imageUrl: slide.image_url,
-        cosPath: slide.cos_path,
-        generationTime: slide.generation_time,
-        error: slide.error,
-      })),
+      slides: mappedSlides,
     }
+
+    console.log('[API] getGenerationStatus 最终结果:', result)
+
+    return result
   },
 
   /**
