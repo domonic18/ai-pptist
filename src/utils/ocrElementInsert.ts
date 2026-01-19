@@ -114,7 +114,25 @@ function createTextElement(
   const fontSize = Math.round(region.font.size);
   const textAlign = region.font.align || "left";
 
-  const content = `<p style="margin: 0; font-family: ${region.font.family}; font-size: ${fontSize}px; color: ${region.font.color}; font-weight: ${fontWeight}; text-align: ${textAlign};">${region.text}</p>`;
+  // 将换行符转换为多个 <p> 标签，确保HTML正确渲染换行
+  // 该PPT系统的换行格式是使用多个 <p> 标签，而不是 <br> 标签
+  // 按换行符分割文本
+  const lines = region.text.split(/(\r\n|\n|\r)/).filter(line => line.trim() !== '' && line !== '\n' && line !== '\r' && line !== '\r\n');
+
+  // 为每一行创建独立的 <p> 标签
+  const pTags = lines.map(line => {
+    // 转义HTML特殊字符
+    const escapedLine = line
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+    return `<p style="margin: 0; font-family: ${region.font.family}; font-size: ${fontSize}px; color: ${region.font.color}; font-weight: ${fontWeight}; text-align: ${textAlign};">${escapedLine}</p>`;
+  });
+
+  // 将所有 <p> 标签连接起来
+  const content = pTags.join('');
 
   return {
     type: "text",

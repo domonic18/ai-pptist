@@ -86,10 +86,11 @@ export default () => {
     }
 
     // 判断src是否为cos_key（不是完整URL）
-    // cos_key格式：images/xxx/yyy.jpg
+    // cos_key格式可能是：images/xxx/yyy.jpg 或 temp/xxx/yyy.jpg 等相对路径
     // 完整URL格式：http://... 或 https://...
     const isFullUrl = /^https?:\/\//i.test(src)
-    const isCosKey = !isFullUrl && src.startsWith('images/')
+    // 修复：任何非完整URL的路径都当作cos_key处理（通过SmartImage代理访问）
+    const isCosKey = !isFullUrl && cosKey
 
     // 如果是cos_key，需要转换为实际可用的URL
     // 这里存储cos_key，让SmartImage组件自动处理代理
