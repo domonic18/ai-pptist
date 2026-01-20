@@ -628,19 +628,7 @@ const parseImage = async (
       }
     }
 
-    // 步骤2: 创建文字元素
-    const regions = convertHybridToTextRegion(result.ocr_result.text_regions);
-    insertOCRElementsAsEditable(regions, result.task_id, {
-      cosKey,
-      source,
-      objectFit: "cover",
-      metadata: {
-        image_width: result.ocr_result.metadata?.image_width,
-        image_height: result.ocr_result.metadata?.image_height,
-      },
-    });
-
-    // 步骤3: 插入装饰元素（如果有）
+    // 步骤2: 插入装饰元素（如果有）- 先插入装饰图，置于下层
     console.log('[装饰元素检查]', {
       hasImageRegions: !!result.ocr_result.image_regions,
       imageRegionsLength: result.ocr_result.image_regions?.length || 0,
@@ -664,6 +652,18 @@ const parseImage = async (
     } else {
       console.warn('[装饰元素] 没有找到装饰图片数据');
     }
+
+    // 步骤3: 创建文字元素 - 先插入文字，置于上层
+    const regions = convertHybridToTextRegion(result.ocr_result.text_regions);
+    insertOCRElementsAsEditable(regions, result.task_id, {
+      cosKey,
+      source,
+      objectFit: "cover",
+      metadata: {
+        image_width: result.ocr_result.metadata?.image_width,
+        image_height: result.ocr_result.metadata?.image_height,
+      },
+    });
 
     // 步骤4: 记录操作并添加到历史记录
     const { addHistorySnapshot } = useHistorySnapshot();
