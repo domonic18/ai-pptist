@@ -3,14 +3,14 @@
  * 封装MinerU、混合OCR识别和图片编辑的API调用
  */
 
-import axios from "axios";
-import { API_CONFIG } from "@/configs/api";
+import axios from 'axios'
+import { API_CONFIG } from '@/configs/api'
+import { POLLING_CONFIG, type PollingConfig } from '@/configs/polling'
 import type {
   EditingTaskResponse,
   EditingStatusResponse,
   EditingResultResponse,
-  HybridOCRResult,
-} from "@/types/imageEditing";
+} from '@/types/imageEditing'
 
 /**
  * MinerU识别选项
@@ -20,6 +20,35 @@ export interface MinerUParseOptions {
   enable_table?: boolean;
   enable_style_recognition?: boolean;
   remove_text?: boolean;
+}
+
+/**
+ * 轮询控制器
+ * 用于中断正在进行的轮询
+ */
+export class PollingController {
+  private aborted = false
+
+  /**
+   * 中断轮询
+   */
+  abort(): void {
+    this.aborted = true
+  }
+
+  /**
+   * 检查是否已中断
+   */
+  isAborted(): boolean {
+    return this.aborted
+  }
+
+  /**
+   * 重置控制器状态
+   */
+  reset(): void {
+    this.aborted = false
+  }
 }
 
 /**
@@ -48,13 +77,13 @@ export const imageEditingService = {
         enable_style_recognition: options.enable_style_recognition !== false,
         remove_text: options.remove_text || false,
       },
-    );
+    )
 
     if (response.data.status === 'success') {
-      return response.data.data;
+      return response.data.data
     }
 
-    throw new Error(response.data.message || "MinerU识别失败");
+    throw new Error(response.data.message || 'MinerU识别失败')
   },
 
   /**
@@ -73,13 +102,13 @@ export const imageEditingService = {
         slide_id: slideId,
         cos_key: cosKey,
       },
-    );
+    )
 
     if (response.data.status === 'success') {
-      return response.data.data;
+      return response.data.data
     }
 
-    throw new Error(response.data.message || "混合OCR识别失败");
+    throw new Error(response.data.message || '混合OCR识别失败')
   },
 
   /**
@@ -94,7 +123,7 @@ export const imageEditingService = {
     slideId: string,
     cosKey: string,
     aiModelId?: string,
-    ocrEngine?: "mineru" | "hybrid_ocr",
+    ocrEngine?: 'mineru' | 'hybrid_ocr',
   ): Promise<EditingTaskResponse> {
     const response = await axios.post(
       API_CONFIG.IMAGE_EDITING.PARSE_AND_REMOVE,
@@ -102,15 +131,15 @@ export const imageEditingService = {
         slide_id: slideId,
         cos_key: cosKey,
         ai_model_id: aiModelId || null,
-        ocr_engine: ocrEngine || "hybrid_ocr",
+        ocr_engine: ocrEngine || 'hybrid_ocr',
       },
-    );
+    )
 
     if (response.data.status === 'success') {
-      return response.data.data;
+      return response.data.data
     }
 
-    throw new Error(response.data.message || "图片编辑失败");
+    throw new Error(response.data.message || '图片编辑失败')
   },
 
   /**
@@ -119,40 +148,59 @@ export const imageEditingService = {
    * @returns 任务状态响应
    */
   async getEditingStatus(taskId: string): Promise<EditingStatusResponse> {
-    const response = await axios.get(API_CONFIG.IMAGE_EDITING.STATUS(taskId));
+    const response = await axios.get(API_CONFIG.IMAGE_EDITING.STATUS(taskId))
 
     if (response.data.status === 'success') {
-      return response.data.data;
+      return response.data.data
     }
 
-    throw new Error(response.data.message || "查询状态失败");
+    throw new Error(response.data.message || '查询状态失败')
   },
 
   /**
-   * 轮询获取完整结果
+   * 轮询获取完整结果（增强版 - 支持无限制轮询和中断）
    * @param taskId 任务ID
    * @param onProgress 进度回调
-   * @param interval 轮询间隔（毫秒）
+   * @param controller 轮询控制器（用于中断）
+   * @param config 轮询配置
    * @returns 完整的编辑结果
    */
   async pollEditingResult(
     taskId: string,
     onProgress?: (progress: number, status: string) => void,
-    interval: number = 2000,
+    controller?: PollingController,
+    config: Partial<PollingConfig> = {},
   ): Promise<EditingResultResponse> {
-    const maxAttempts = 60;
-    let attempts = 0;
+    const finalConfig = { ...POLLING_CONFIG.IMAGE_EDITING, ...config }
 
-    while (attempts < maxAttempts) {
-      const result = await this.getEditingStatus(taskId);
+    const startTime = Date.now()
 
-      // 通知进度
+    // 无限制轮询，直到任务完成、失败或被中断
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      // 检查是否被中断
+      if (controller?.isAborted()) {
+        throw new Error('轮询已取消')
+      }
+
+      const result = await this.getEditingStatus(taskId)
+
+      // 通知进度（包含已用时间）
       if (onProgress) {
-        onProgress(result.progress, result.status);
+        const elapsed = Date.now() - startTime
+        const elapsedSeconds = Math.floor(elapsed / 1000)
+        const minutes = Math.floor(elapsedSeconds / 60)
+        const seconds = elapsedSeconds % 60
+        const timeStr = minutes > 0 ? `${minutes}分${seconds}秒` : `${seconds}秒`
+
+        onProgress(
+          result.progress,
+          `${result.status} (已等待: ${timeStr})`,
+        )
       }
 
       // 检查是否完成
-      if (result.status === "completed") {
+      if (result.status === 'completed') {
         return {
           task_id: result.task_id,
           slide_id: result.slide_id,
@@ -160,21 +208,18 @@ export const imageEditingService = {
           progress: result.progress,
           ocr_result: result.ocr_result,
           edited_image: result.edited_image,
-        };
+        }
       }
 
       // 检查是否失败
-      if (result.status === "failed") {
-        throw new Error(result.message || "编辑失败");
+      if (result.status === 'failed') {
+        throw new Error(result.message || '编辑失败')
       }
 
-      // 等待后重试
-      await new Promise((resolve) => setTimeout(resolve, interval));
-      attempts++;
+      // 等待后重试（固定间隔）
+      await new Promise((resolve) => setTimeout(resolve, finalConfig.interval))
     }
-
-    throw new Error("编辑超时");
   },
-};
+}
 
-export default imageEditingService;
+export default imageEditingService

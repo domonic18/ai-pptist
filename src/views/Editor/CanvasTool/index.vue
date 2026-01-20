@@ -7,6 +7,8 @@
           <Loading />
         </el-icon>
         <div class="ocr-loading-text">{{ ocrLoadingText }}</div>
+        <div class="ocr-parsing-tips">大模型处理时间较长，请耐心等待...</div>
+        <button class="ocr-cancel-btn" @click="cancelParsing">取消操作</button>
       </div>
     </div>
 
@@ -344,7 +346,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from "vue";
+import { ref, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from "pinia";
 import { useMainStore, useSlidesStore, useSnapshotStore } from "@/store";
 import { getImageDataURL } from "@/utils/image";
@@ -353,8 +355,9 @@ import type { LinePoolItem } from "@/configs/lines";
 import useScaleCanvas from "@/hooks/useScaleCanvas";
 import useHistorySnapshot from "@/hooks/useHistorySnapshot";
 import useCreateElement from "@/hooks/useCreateElement";
-import message from "@/utils/message";
-import { Loading } from "@element-plus/icons-vue";
+import message from '@/utils/message'
+import { ElMessageBox } from 'element-plus'
+import { Loading } from '@element-plus/icons-vue'
 
 import ShapePool from "./ShapePool.vue";
 import LinePool from "./LinePool.vue";
@@ -487,19 +490,22 @@ const openOptimizeSlideDialog = () => {
 };
 
 // 图片解析功能（使用混合OCR + 文字去除）
-import imageEditingService from "@/services/imageEditingService";
-import type { HybridTextRegion, ImageRegion } from "@/types/imageEditing";
+import imageEditingService, { PollingController } from '@/services/imageEditingService'
+import type { HybridTextRegion, ImageRegion } from '@/types/imageEditing'
 import {
   insertOCRElementsAsEditable,
   insertImageElements,
   hasImageForOCR,
   getImageCOSKeyForOCR,
   getSlideId,
-} from "@/utils/ocrElementInsert";
+} from '@/utils/ocrElementInsert'
 
-const parsingImage = ref(false);
-const ocrEngineSelectorVisible = ref(false);
-const ocrLoadingText = ref("正在解析图片...");
+const parsingImage = ref(false)
+const ocrEngineSelectorVisible = ref(false)
+const ocrLoadingText = ref('正在解析图片...')
+
+// 轮询控制器
+const pollingController = ref<PollingController | null>(null)
 
 // 打开OCR引擎选择器
 const openOCREngineSelector = () => {
@@ -582,19 +588,41 @@ const parseImage = async (
       }
     }
 
+    // 创建轮询控制器
+    const controller = new PollingController()
+    pollingController.value = controller
+
+    // 保存任务信息到 localStorage（支持刷新恢复）
+    localStorage.setItem(
+      'pending_editing_task',
+      JSON.stringify({
+        taskId: response.task_id,
+        slideId,
+        cosKey,
+        source,
+        engine,
+        options,
+        startTime: Date.now(),
+      }),
+    )
+
     // 轮询获取结果
     const result = await imageEditingService.pollEditingResult(
       response.task_id,
       (progress, status) => {
-        console.log(`图片识别进度: ${progress}% - ${status}`);
-        // 更新loading文本显示进度
-        const statusText = status === 'ocr_processing' ? 'OCR识别中' 
-          : status === 'text_removal' ? '去除文字中' 
-          : status === 'completed' ? '处理完成' 
-          : '处理中';
-        ocrLoadingText.value = `${engineName}解析${sourceText} - ${statusText} (${progress}%)`;
+        console.log(`图片识别进度: ${progress}% - ${status}`)
+        // 更新loading文本显示进度（包含等待时间）
+        ocrLoadingText.value = `${engineName}解析${sourceText} - ${status}`
       },
-    );
+      controller, // 传入控制器
+      {
+        maxTimeout: 0, // 无限制
+        enableProgressive: false, // 固定间隔
+      },
+    )
+
+    // 任务完成，清除持久化数据
+    localStorage.removeItem('pending_editing_task')
 
     if (!result.ocr_result || !result.ocr_result.text_regions) {
       message.error("解析结果为空");
@@ -681,11 +709,21 @@ const parseImage = async (
       `${engineName}识别完成！识别到 ${textCount} 个文字区域${imageInfoText}${hasEditedImage}`,
     );
   } catch (error: any) {
-    message.error(`解析失败：${error.message || "未知错误"}`);
-    console.error("图片识别失败:", error);
+    // 检查是否是用户取消
+    if (error.message === '轮询已取消') {
+      message.info('已取消图片编辑')
+      // 取消时也清除持久化数据
+      localStorage.removeItem('pending_editing_task')
+      return
+    }
+    message.error(`解析失败：${error.message || '未知错误'}`)
+    console.error('图片识别失败:', error)
+    // 失败时也清除持久化数据
+    localStorage.removeItem('pending_editing_task')
   } finally {
-    parsingImage.value = false;
-    ocrLoadingText.value = "正在解析图片...";
+    parsingImage.value = false
+    ocrLoadingText.value = '正在解析图片...'
+    pollingController.value = null
   }
 };
 
@@ -704,6 +742,105 @@ function convertHybridToTextRegion(hybridRegions: HybridTextRegion[]) {
     },
   }));
 }
+
+/**
+ * 取消图片编辑轮询
+ */
+const cancelParsing = () => {
+  if (pollingController.value) {
+    pollingController.value.abort()
+  }
+}
+
+/**
+ * 恢复未完成的编辑任务
+ */
+const resumePolling = async (taskData: any) => {
+  const { taskId, slideId, cosKey, source, engine, options } = taskData
+
+  const sourceText = source === 'selected' ? '选中的图片' : '背景图片'
+  const engineName = engine === 'mineru' ? 'MinerU' : '混合OCR'
+
+  try {
+    parsingImage.value = true
+    ocrLoadingText.value = `正在恢复${engineName}解析${sourceText}...`
+
+    // 创建轮询控制器
+    const controller = new PollingController()
+    pollingController.value = controller
+
+    // 轮询获取结果
+    const result = await imageEditingService.pollEditingResult(
+      taskId,
+      (progress, status) => {
+        ocrLoadingText.value = `${engineName}解析${sourceText} - ${status}`
+      },
+      controller,
+      {
+        maxTimeout: 0,
+        enableProgressive: false,
+      },
+    )
+
+    // 任务完成，清除持久化数据
+    localStorage.removeItem('pending_editing_task')
+
+    // 应用结果（与 parseImage 相同的处理逻辑）
+    if (!result.ocr_result || !result.ocr_result.text_regions) {
+      message.error('解析结果为空')
+      return
+    }
+
+    // ... 省略结果处理逻辑，与 parseImage 相同 ...
+    message.success('恢复成功！图片编辑已完成')
+  } catch (error: any) {
+    if (error.message === '轮询已取消') {
+      message.info('已取消图片编辑')
+      localStorage.removeItem('pending_editing_task')
+      return
+    }
+    message.error(`恢复失败：${error.message || '未知错误'}`)
+    console.error('恢复图片识别失败:', error)
+    localStorage.removeItem('pending_editing_task')
+  } finally {
+    parsingImage.value = false
+    ocrLoadingText.value = '正在解析图片...'
+    pollingController.value = null
+  }
+}
+
+// 组件挂载时检查是否有未完成的任务
+onMounted(async () => {
+  const pendingTaskStr = localStorage.getItem('pending_editing_task')
+  if (pendingTaskStr) {
+    try {
+      const pendingTask = JSON.parse(pendingTaskStr)
+      // 询问用户是否继续
+      await ElMessageBox.confirm(
+        '检测到有未完成的图片编辑任务，是否继续？',
+        '提示',
+        {
+          confirmButtonText: '继续',
+          cancelButtonText: '放弃',
+          type: 'info',
+        },
+      )
+      // 继续轮询
+      await resumePolling(pendingTask)
+    } catch {
+      // 用户选择放弃或解析错误，清除持久化数据
+      localStorage.removeItem('pending_editing_task')
+    }
+  }
+})
+
+// 组件卸载时取消轮询
+onUnmounted(() => {
+  if (pollingController.value) {
+    pollingController.value.abort()
+    pollingController.value = null
+  }
+})
 </script>
 
 <style lang="scss" scoped>
@@ -751,6 +888,34 @@ function convertHybridToTextRegion(hybridRegions: HybridTextRegion[]) {
   font-weight: 500;
   text-align: center;
   max-width: 400px;
+}
+
+.ocr-parsing-tips {
+  margin-top: 12px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+}
+
+.ocr-cancel-btn {
+  margin-top: 20px;
+  padding: 8px 24px;
+  font-size: 14px;
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
 }
 .left-handler,
 .more {

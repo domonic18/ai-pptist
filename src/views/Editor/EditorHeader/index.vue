@@ -76,6 +76,9 @@
     </div>
 
     <div class="right">
+      <!-- 自动保存状态 -->
+      <AutoSaveStatus :saveStatus="saveStatus" :lastSavedTime="lastSavedTime" />
+
       <div class="group-menu-item">
         <div class="menu-item" v-tooltip="'幻灯片放映（F5）'" @click="enterScreening()">
           <IconPpt class="icon" />
@@ -132,7 +135,7 @@
 </template>
 
 <script lang="ts" setup>
-import { nextTick, ref, useTemplateRef, computed, watch } from 'vue'
+import { nextTick, ref, useTemplateRef } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useMainStore, useSlidesStore } from '@/store'
 import useScreening from '@/hooks/useScreening'
@@ -149,9 +152,10 @@ import Input from '@/components/Input.vue'
 import Popover from '@/components/Popover.vue'
 import PopoverMenuItem from '@/components/PopoverMenuItem.vue'
 import Divider from '@/components/Divider.vue'
-import Modal from '@/components/Modal.vue'
 import ImageManager from '@/components/image/ImageManager.vue'
 import UserDropdown from '@/components/UserDropdown.vue'
+import AutoSaveStatus from '@/components/AutoSaveStatus.vue'
+import { useAutoSaveState } from '@/hooks/useAutoSave'
 
 const mainStore = useMainStore()
 const slidesStore = useSlidesStore()
@@ -161,7 +165,10 @@ const { importSpecificFile, importPPTXFile, importJSON, exporting } = useImport(
 const { resetSlides } = useSlideHandler()
 const { createImageElement } = useCreateElement()
 
-
+// 自动保存状态（从 Editor 组件提供）
+const autoSaveState = useAutoSaveState()
+const saveStatus = autoSaveState?.saveStatus || ref('idle')
+const lastSavedTime = autoSaveState?.lastSavedTime || ref(null)
 
 const mainMenuVisible = ref(false)
 const hotkeyDrawerVisible = ref(false)

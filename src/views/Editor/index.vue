@@ -59,6 +59,7 @@ import { storeToRefs } from 'pinia'
 import { useMainStore } from '@/store'
 import useGlobalHotkey from '@/hooks/useGlobalHotkey'
 import usePasteEvent from '@/hooks/usePasteEvent'
+import { useAutoSave } from '@/hooks/useAutoSave'
 
 import EditorHeader from './EditorHeader/index.vue'
 import Canvas from './Canvas/index.vue'
@@ -87,6 +88,16 @@ const remarkHeight = ref(40)
 
 useGlobalHotkey()
 usePasteEvent()
+
+// 自动保存功能
+const {
+  saveStatus,
+  lastSavedTime,
+} = useAutoSave({
+  enabled: true,
+  interval: 30000, // 30秒自动保存
+  debounceDelay: 500, // 操作后0.5秒延迟保存（近乎实时）
+})
 </script>
 
 <style lang="scss" scoped>

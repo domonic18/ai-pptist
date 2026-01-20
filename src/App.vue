@@ -18,6 +18,7 @@ import { storeToRefs } from 'pinia'
 import { useScreenStore, useMainStore, useSnapshotStore, useSlidesStore } from '@/store'
 import { LOCALSTORAGE_KEY_DISCARDED_DB } from '@/configs/storage'
 import { deleteDiscardedDB } from '@/utils/database'
+import { autoSaveStorage } from '@/utils/autoSaveStorage'
 import api from '@/services'
 
 import FullscreenSpin from '@/components/FullscreenSpin.vue'
@@ -34,9 +35,47 @@ if (import.meta.env.MODE !== 'development') {
 }
 
 onMounted(async () => {
-  // 初始化演示文稿数据
-  const mockSlides = await api.getMockData('slides')
-  slidesStore.setSlides(mockSlides)
+  // 检查是否有可恢复的自动保存数据
+  const hasAutoSave = await autoSaveStorage.hasData()
+
+  if (hasAutoSave) {
+    // 从 IndexedDB 加载自动保存的数据
+    const savedData = await autoSaveStorage.load()
+    if (savedData) {
+      // 恢复 slidesStore
+      slidesStore.setSlides(savedData.slidesStore.slides)
+      slidesStore.slideIndex = savedData.slidesStore.slideIndex
+      if (savedData.slidesStore.theme) {
+        slidesStore.theme = savedData.slidesStore.theme
+      }
+      if (savedData.slidesStore.title) {
+        slidesStore.title = savedData.slidesStore.title
+      }
+
+      // 恢复 mainStore
+      if (savedData.mainStore) {
+        if (savedData.mainStore.selectedSlidesIndex) {
+          mainStore.selectedSlidesIndex = savedData.mainStore.selectedSlidesIndex
+        }
+        if (savedData.mainStore.canvasScale !== undefined) {
+          mainStore.canvasScale = savedData.mainStore.canvasScale
+        }
+        if (savedData.mainStore.canvasPercentage !== undefined) {
+          mainStore.canvasPercentage = savedData.mainStore.canvasPercentage
+        }
+      }
+
+      console.log('[App] 已从自动保存恢复数据')
+    } else {
+      // 恢复失败，加载初始 mock 数据
+      const mockSlides = await api.getMockData('slides')
+      slidesStore.setSlides(mockSlides)
+    }
+  } else {
+    // 没有自动保存数据，加载初始 mock 数据
+    const mockSlides = await api.getMockData('slides')
+    slidesStore.setSlides(mockSlides)
+  }
 
   // 初始化 IndexedDB
   await deleteDiscardedDB()
