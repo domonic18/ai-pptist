@@ -629,85 +629,13 @@ const parseImage = async (
       return;
     }
 
-    // 应用编辑结果（替换图片组件 + 创建文字元素 + 插入装饰元素）
-    // 步骤1: 如果有去除文字后的图片，更新图片组件
-    if (result.edited_image && result.edited_image.edited_cos_key) {
-      const editedCosKey = result.edited_image.edited_cos_key;
-      const currentSlide = slidesStore.currentSlide;
-
-      if (currentSlide) {
-        const imageElement = currentSlide.elements.find((el: any) => {
-          return el.type === "image" && el.imageInfo?.cosKey === cosKey;
-        }) as any;
-
-        if (imageElement) {
-          slidesStore.updateElement({
-            id: imageElement.id,
-            props: {
-              src: editedCosKey,
-              imageInfo: {
-                ...imageElement.imageInfo,
-                cosKey: editedCosKey,
-              },
-            },
-          });
-          message.info("图片已更新（文字已去除）");
-        }
-      }
-    }
-
-    // 步骤2: 插入装饰元素（如果有）- 先插入装饰图，置于下层
-    console.log('[装饰元素检查]', {
-      hasImageRegions: !!result.ocr_result.image_regions,
-      imageRegionsLength: result.ocr_result.image_regions?.length || 0,
-      imageRegions: result.ocr_result.image_regions
-    });
-
-    if (
-      result.ocr_result.image_regions &&
-      result.ocr_result.image_regions.length > 0
-    ) {
-      console.log('[装饰元素] 开始插入', result.ocr_result.image_regions.length, '个装饰图片');
-      insertImageElements(result.ocr_result.image_regions, {
-        cosKey,
-        source,
-        objectFit: "cover",
-        metadata: {
-          image_width: result.ocr_result.metadata?.image_width,
-          image_height: result.ocr_result.metadata?.image_height,
-        },
-      });
-    } else {
-      console.warn('[装饰元素] 没有找到装饰图片数据');
-    }
-
-    // 步骤3: 创建文字元素 - 先插入文字，置于上层
-    const regions = convertHybridToTextRegion(result.ocr_result.text_regions);
-    insertOCRElementsAsEditable(regions, result.task_id, {
+    // 应用编辑结果（更新图片 + 插入装饰元素 + 创建文字元素 + 记录历史）
+    applyOCREditingResult({
+      result,
       cosKey,
       source,
-      objectFit: "cover",
-      metadata: {
-        image_width: result.ocr_result.metadata?.image_width,
-        image_height: result.ocr_result.metadata?.image_height,
-      },
-    });
-
-    // 步骤4: 记录操作并添加到历史记录
-    const { addHistorySnapshot } = useHistorySnapshot();
-    addHistorySnapshot();
-
-    // 获取文字数量（兼容两种metadata类型）
-    const textCount =
-      "text_count" in result.ocr_result.metadata
-        ? result.ocr_result.metadata.text_count
-        : result.ocr_result.text_regions.length;
-    const imageCount = result.ocr_result.image_regions?.length || 0;
-    const hasEditedImage = result.edited_image ? "并已去除文字" : "";
-    const imageInfoText = imageCount > 0 ? `、${imageCount} 个装饰元素` : "";
-    message.success(
-      `${engineName}识别完成！识别到 ${textCount} 个文字区域${imageInfoText}${hasEditedImage}`,
-    );
+      engineName,
+    })
   } catch (error: any) {
     // 检查是否是用户取消
     if (error.message === '轮询已取消') {
@@ -741,6 +669,121 @@ function convertHybridToTextRegion(hybridRegions: HybridTextRegion[]) {
       align: region.font.align || "left",
     },
   }));
+}
+
+/**
+ * OCR编辑结果应用参数接口
+ */
+interface ApplyOCREditParams {
+  result: {
+    ocr_result: {
+      text_regions: HybridTextRegion[];
+      image_regions?: ImageRegion[];
+      metadata?: {
+        image_width?: number;
+        image_height?: number;
+        text_count?: number;
+      };
+    };
+    edited_image?: {
+      edited_cos_key: string;
+    };
+    task_id: string;
+  };
+  cosKey: string;
+  source: string;
+  engineName: string;
+}
+
+/**
+ * 应用OCR编辑结果（更新图片 + 插入装饰元素 + 创建文字元素 + 记录历史）
+ * @param params 应用编辑结果的参数
+ */
+function applyOCREditingResult(params: ApplyOCREditParams) {
+  const { result, cosKey, source, engineName } = params;
+
+  // 步骤1: 如果有去除文字后的图片，更新图片组件
+  if (result.edited_image && result.edited_image.edited_cos_key) {
+    const editedCosKey = result.edited_image.edited_cos_key;
+    const currentSlide = slidesStore.currentSlide;
+
+    if (currentSlide) {
+      const imageElement = currentSlide.elements.find((el: any) => {
+        return el.type === "image" && el.imageInfo?.cosKey === cosKey;
+      }) as any;
+
+      if (imageElement) {
+        slidesStore.updateElement({
+          id: imageElement.id,
+          props: {
+            src: editedCosKey,
+            imageInfo: {
+              ...imageElement.imageInfo,
+              cosKey: editedCosKey,
+            },
+          },
+        });
+        message.info("图片已更新（文字已去除）");
+      }
+    }
+  }
+
+  // 步骤2: 插入装饰元素（如果有）- 先插入装饰图，置于下层
+  console.log("[装饰元素检查]", {
+    hasImageRegions: !!result.ocr_result.image_regions,
+    imageRegionsLength: result.ocr_result.image_regions?.length || 0,
+    imageRegions: result.ocr_result.image_regions,
+  });
+
+  if (
+    result.ocr_result.image_regions &&
+    result.ocr_result.image_regions.length > 0
+  ) {
+    console.log(
+      "[装饰元素] 开始插入",
+      result.ocr_result.image_regions.length,
+      "个装饰图片",
+    );
+    insertImageElements(result.ocr_result.image_regions, {
+      cosKey,
+      source,
+      objectFit: "cover",
+      metadata: {
+        image_width: result.ocr_result.metadata?.image_width,
+        image_height: result.ocr_result.metadata?.image_height,
+      },
+    });
+  } else {
+    console.warn("[装饰元素] 没有找到装饰图片数据");
+  }
+
+  // 步骤3: 创建文字元素 - 先插入文字，置于上层
+  const regions = convertHybridToTextRegion(result.ocr_result.text_regions);
+  insertOCRElementsAsEditable(regions, result.task_id, {
+    cosKey,
+    source,
+    objectFit: "cover",
+    metadata: {
+      image_width: result.ocr_result.metadata?.image_width,
+      image_height: result.ocr_result.metadata?.image_height,
+    },
+  });
+
+  // 步骤4: 记录操作并添加到历史记录
+  const { addHistorySnapshot } = useHistorySnapshot();
+  addHistorySnapshot();
+
+  // 获取文字数量（兼容两种metadata类型）
+  const textCount =
+    "text_count" in result.ocr_result.metadata
+      ? result.ocr_result.metadata.text_count
+      : result.ocr_result.text_regions.length;
+  const imageCount = result.ocr_result.image_regions?.length || 0;
+  const hasEditedImage = result.edited_image ? "并已去除文字" : "";
+  const imageInfoText = imageCount > 0 ? `、${imageCount} 个装饰元素` : "";
+  message.success(
+    `${engineName}识别完成！识别到 ${textCount} 个文字区域${imageInfoText}${hasEditedImage}`,
+  );
 }
 
 /**
@@ -791,8 +834,13 @@ const resumePolling = async (taskData: any) => {
       return
     }
 
-    // ... 省略结果处理逻辑，与 parseImage 相同 ...
-    message.success('恢复成功！图片编辑已完成')
+    // 应用编辑结果（更新图片 + 插入装饰元素 + 创建文字元素 + 记录历史）
+    applyOCREditingResult({
+      result,
+      cosKey,
+      source,
+      engineName,
+    })
   } catch (error: any) {
     if (error.message === '轮询已取消') {
       message.info('已取消图片编辑')
